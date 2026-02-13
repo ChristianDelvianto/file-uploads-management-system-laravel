@@ -64,6 +64,8 @@ return [
 
     'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
 
+    'token_name_length' => env('SANCTUM_TOKEN_NAME_LENGTH', 32),
+
     /*
     |--------------------------------------------------------------------------
     | Sanctum Middleware
