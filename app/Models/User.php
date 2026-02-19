@@ -4,13 +4,16 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -18,6 +21,8 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'role',
+        'used_disk',
         'name',
         'email',
         'password',
@@ -29,8 +34,9 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
+        'role',
         'password',
-        'remember_token',
+        // 'remember_token',
     ];
 
     /**
@@ -41,8 +47,24 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'email_verified_at' => 'datetime',
         ];
+    }
+
+    /**
+     * User has many File
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(\App\Models\File::class, 'user_id', 'id');
+    }
+
+    /**
+     * User has one Plan
+     */
+    public function plan(): HasOne
+    {
+        return $this->hasOne(\App\Models\PlanUser::class, 'user_id', 'id');
     }
 }
