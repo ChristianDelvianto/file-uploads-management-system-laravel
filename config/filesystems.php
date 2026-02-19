@@ -77,4 +77,17 @@ return [
         public_path('storage') => storage_path('app/public'),
     ],
 
+    // Added
+    'type' => [
+        'document' => [
+            'application/msword',
+            'application/pdf',
+            'application/vnd.ms-excel',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'text/plain',
+        ]
+    ]
 ];
