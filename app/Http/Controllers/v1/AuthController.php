@@ -5,12 +5,16 @@ namespace App\Http\Controllers\v1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\v1\AuthNewTokenRequest;
 use App\Http\Requests\v1\AuthNewUserRequest;
+use App\Http\Resources\PlanUserResource;
+use App\Http\Resources\UserResource;
+use App\Models\Plan;
+use App\Models\PlanUser;
 use App\Models\User;
 use App\Services\v1\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -28,9 +32,11 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        $planUser = PlanUser::with(['plan'])->where('user_id', $user->id)->first();
+
         return response()->json([
-            'profile' => $user,
-            'role' => $user->role,
+            'plan' => PlanUserResource::make($planUser),
+            'profile' => UserResource::make($user),
         ]);
     }
 
@@ -57,11 +63,13 @@ class AuthController extends Controller
             ]);
         }
 
-       $plainToken = $this->authService->generateNewToken($user);
+        $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
+
+        $plainToken = $this->authService->generateNewToken($user);
 
         return response()->json([
-            'profile' => $user,
-            'role' => $user->role,
+            'plan' => PlanUserResource::make($planUser),
+            'profile' => UserResource::make($user),
             'token' => $plainToken,
         ]);
     }
@@ -71,13 +79,22 @@ class AuthController extends Controller
      */
     public function newUser(AuthNewUserRequest $request): JsonResponse
     {
+        $freePlan = Plan::firstWhere('name', 'Free');
+
         $user = User::create(['role' => 'user', ...$request->validated()]);
+
+        $planUser = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
+        $planUser->setRelation('plan', $freePlan);
 
         $plainToken = $this->authService->generateNewToken($user);
 
+        Storage::disk('public')->makeDirectory("{$user->id}");
+
+        // Send verification email
+
         return response()->json([
-            'profile' => $user,
-            'role' => $user->role,
+            'plan' => PlanUserResource::make($planUser),
+            'profile' => UserResource::make($user),
             'token' => $plainToken,
         ]);
     }
