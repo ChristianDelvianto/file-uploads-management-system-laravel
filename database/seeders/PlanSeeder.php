@@ -14,7 +14,7 @@ class PlanSeeder extends Seeder
     public function run(): void
     {
         // Free
-        Plan::create(['price' => 0, 'type' => 'free', 'size' => 0]);
+        Plan::create(['name' => 'Free', 'price' => 0, 'size' => 500000000]);
 
 
     }
