@@ -3,6 +3,7 @@
 namespace App\Services\v1;
 
 use App\Models\File;
+use App\Models\PlanUser;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\UploadedFile;
@@ -45,13 +46,19 @@ class FileService
         $lock = Cache::lock("file:{$file->id}:update", 10);
 
         try {
-            $lock->get();
+            $lock->block(10);
 
             DB::transaction(function () use ($file) {
-                $file->delete();
+                $file->refresh();
+
+                if (!$file->trashed()) {
+                    $file->delete();
+                }
             });
         } catch (Exception $e) {
-            throw new Exception('Internal server error.', 500);
+            report($e);
+
+            throw $e;
         } finally {
             $lock?->release();
         }
@@ -62,26 +69,33 @@ class FileService
      */
     public function storeFileAndCreateRecord(User $user, UploadedFile $uploadedFile, null|UploadedFile $thumbnail = null): File
     {
+        $uuid = Str::uuid()->toString();
+        $mimeType = $uploadedFile->getMimeType();
+        $fileName = $uploadedFile->getClientOriginalName();
+        $fileExtension = $uploadedFile->getClientOriginalExtension();
+        $fileCategory = $this->getCategory($uploadedFile);
+        $thumbnailPath = null; // Placeholder for thumbnail path
+
         $lock = Cache::lock("user:{$user->id}:update", 10);
 
         try {
-            $lock->get();
+            $lock->block(10);
 
-            return DB::transaction(function () use ($thumbnail, $uploadedFile, $user) {
-                $uuid = Str::uuid()->toString();
-                $mimeType = $uploadedFile->getMimeType();
-                $fileName = $uploadedFile->getClientOriginalName();
-                $fileExtension = explode('/', $mimeType)[1];
-                $filePath = "{$fileName}.{$fileExtension}";
-                $fileCategory = $this->getCategory($uploadedFile);
-                $thumbnailPath = null;
+            Storage::disk('public')->putFileAs($uuid, $uploadedFile, $uploadedFile->getClientOriginalName());
 
-                Storage::disk('public')->putFileAs($uuid, $uploadedFile, $filePath);
+            if ($fileCategory === 'video') {
+                $thumbnailPath = 'thumbnail_' . Str::random() . '.jpeg';
 
-                if ($fileCategory === 'video') {
-                    $thumbnailPath = 'thumbnail_' . Str::random() . '.jpeg';
+                Storage::disk('public')->putFileAs($uuid, $thumbnail, $thumbnailPath);
+            }
 
-                    Storage::disk('public')->putFileAs($uuid, $thumbnail, $thumbnailPath);
+            return DB::transaction(function () use ($user, $uploadedFile, $uuid, $fileCategory, $fileExtension, $mimeType, $fileName, $thumbnail, &$thumbnailPath) {
+                $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
+
+                $lockUser = User::where('id', $user->id)->lockForUpdate()->first();
+
+                if ($lockUser->used_bytes + $uploadedFile->getSize() > $planUser->plan->limit_bytes) {
+                    throw new Exception('The uploaded file exceeds your remaining storage limit.', 400);
                 }
 
                 $file = File::create([
@@ -89,20 +103,24 @@ class FileService
                             'category' => $fileCategory,
                             'extension' => $fileExtension,
                             'mime_type' => $mimeType,
-                            'name' => $fileName . '.' . $fileExtension,
+                            'name' => $fileName,
                             'size' => $uploadedFile->getSize(),
                             'thumbnail_path' => $thumbnailPath,
-                            'storage_path' => $filePath,
+                            'storage_path' => $uploadedFile->getClientOriginalName(),
                             'disk' => config('filesystems.default'),
                             'user_id' => $user->id,
                         ]);
 
-                $user->increment('used_disk', $uploadedFile->getSize());
+                $lockUser->increment('used_bytes', $uploadedFile->getSize());
 
                 return $file;
             });
         } catch (Exception $e) {
-            throw new Exception('Internal server error.', 500);
+            Storage::disk('public')->deleteDirectory($uuid);
+
+            report($e);
+
+            throw $e;
         } finally {
             $lock?->release();
         }
@@ -116,9 +134,15 @@ class FileService
         $lock = Cache::lock("file:{$file->id}:update", 10);
 
         try {
-            $lock->get();
+            $lock->block(10);
 
             return DB::transaction(function () use ($file, $data) {
+                $file->refresh();
+
+                if ($file->trashed()) {
+                    throw new Exception('Cannot update a deleted file.', 400);
+                }
+
                 $file->fill($data);
 
                 if ($file->isDirty()) {
@@ -128,7 +152,9 @@ class FileService
                 return $file;
             });
         } catch (Exception $e) {
-            throw new Exception('Internal server error.', 500);
+            report($e);
+
+            throw $e;
         } finally {
             $lock?->release();
         }

@@ -14,8 +14,31 @@ class PlanSeeder extends Seeder
     public function run(): void
     {
         // Free
-        Plan::create(['name' => 'Free', 'price' => 0, 'size' => 500000000]);
+        Plan::create([
+            'name' => 'Free',
+            'price_cents' => 0,
+            'limit_bytes' => 2147483648 // 2GB in bytes
+        ]);
 
+        // Student
+        Plan::create([
+            'name' => 'Student',
+            'price_cents' => 499, // $4.99
+            'limit_bytes' => 5368709120 // 5GB in bytes
+        ]);
 
+        // Pro
+        Plan::create([
+            'name' => 'Pro',
+            'price_cents' => 999, // $9.99
+            'limit_bytes' => 21474836480 // 20GB in bytes
+        ]);
+
+        // Premium
+        Plan::create([
+            'name' => 'Premium',
+            'price_cents' => 1999, // $19.99
+            'limit_bytes' => 53687091200 // 50GB in bytes
+        ]);
     }
 }

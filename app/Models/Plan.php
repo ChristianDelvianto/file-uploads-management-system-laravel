@@ -17,9 +17,9 @@ class Plan extends Model
      */
     protected $fillable = [
         'name',
-        'price',
+        'price_cents',
         'is_active',
-        'size',
+        'limit_bytes',
     ];
     
 }

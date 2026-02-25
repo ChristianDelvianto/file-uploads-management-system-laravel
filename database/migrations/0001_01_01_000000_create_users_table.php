@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('role')->default('user'); // admin, user
-            $table->unsignedBigInteger('used_disk')->default(0);
+            $table->unsignedBigInteger('used_bytes')->default(0);
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
