@@ -35,7 +35,7 @@ return new class extends Migration
             // User-Pattern
             $table->index(['user_id', 'deleted_at', 'updated_at']);
             $table->index(['user_id', 'category', 'deleted_at', 'updated_at']);
-            $table->index(['user_id', 'original_name', 'deleted_at']);
+            $table->index(['user_id', 'name', 'deleted_at', 'updated_at']);
 
             // Admin-Pattern (Global)
             $table->index(['deleted_at', 'updated_at']);
@@ -44,7 +44,7 @@ return new class extends Migration
         });
 
         // Full-Text index
-        // DB::statement('ALTER TABLE files ADD FULLTEXT fulltext_index (original_name)');
+        // DB::statement('ALTER TABLE files ADD FULLTEXT fulltext_index (name)');
     }
 
     /**

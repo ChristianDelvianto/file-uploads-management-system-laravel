@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
             $table->string('name', 30)->unique(); // free, student, pro, enterprise
-            $table->unsignedBigInteger('price');
+            $table->unsignedBigInteger('price')->unique();
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('size');
             $table->timestamps();
 
             // Indexes
+            $table->index(['is_active', 'created_at']);
         });
     }
 
