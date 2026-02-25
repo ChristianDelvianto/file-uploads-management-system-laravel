@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\v1;
 
+use App\Models\PlanUser;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,7 @@ class FileStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->role === 'user';
+        return true;
     }
 
     /**
@@ -24,9 +25,9 @@ class FileStoreRequest extends FormRequest
     {
         $user = $this->user();
     
-        $plan = $user->subscription;
+        $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
         
-        $remainingSpace = $plan - $user->used_disk;
+        $remainingSpace = $planUser->plan->size - $user->used_disk;
 
         return [
             'file' => [
