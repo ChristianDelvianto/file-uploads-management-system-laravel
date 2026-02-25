@@ -23,17 +23,19 @@ class FileStoreRequest extends FormRequest
      */
     public function rules(): array
     {
+        $maxFileSize = config('filesystems.max_file_size');
+
         $user = $this->user();
     
         $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
         
-        $remainingSpace = $planUser->plan->size - $user->used_disk;
+        $remainingSpace = $planUser->plan->limit_bytes - $user->used_bytes;
 
         return [
             'file' => [
                 'required',
                 'file',
-                'max:51200',
+                'max:' . $maxFileSize,
                 function ($attribute, $value, $fail) use ($remainingSpace) {
                     $fileSizeBytes = $value->getSize();
 

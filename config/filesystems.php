@@ -78,6 +78,8 @@ return [
     ],
 
     // Added
+    'max_file_size' => env('MAX_FILE_SIZE_PER_UPLOAD', 314572800), // 300mb
+
     'type' => [
         'document' => [
             'application/msword',
