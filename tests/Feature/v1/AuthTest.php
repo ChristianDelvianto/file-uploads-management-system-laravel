@@ -2,35 +2,17 @@
 
 namespace Tests\Feature\v1;
 
+use App\Models\Plan;
+use App\Models\PlanUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
-
-    /**
-     * Guest can issue a new access token
-     */
-    public function test_guest_can_issue_token(): void
-    {
-        $userData = [
-            'email' => 'test@example.com',
-            'password' => 'password',
-        ];
-
-        User::factory()->create($userData);
-
-        $response = $this->actingAsGuest()
-                    ->post(route('api.v1.auth.tokens.new'), $userData);
-
-        $response->assertStatus(200);
-        $responseData = collect($response->json());
-
-        $this->assertTrue($responseData->has('token'));
-    }
 
     /**
      * Guest must not be able to retrieve user info
@@ -39,7 +21,6 @@ class AuthTest extends TestCase
     {
         $response = $this->actingAsGuest()
                     ->get(route('api.v1.auth.me'));
-
         $response->assertStatus(401);
     }
 
@@ -50,21 +31,79 @@ class AuthTest extends TestCase
     {
         $response = $this->actingAsGuest()
                     ->delete(route('api.v1.auth.tokens.delete'));
-
         $response->assertStatus(401);
     }
 
     /**
-     * User can revoke their current token
+     * Profile info route must return role key
      */
-    public function test_token_can_be_revoke(): void
+    public function test_info_route_returns_role(): void
     {
         $userData = [
             'email' => 'test@example.com',
             'password' => 'password',
         ];
 
-        User::factory()->create($userData);
+        $user = User::factory()->create($userData);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
+
+        $loginResponse = $this->actingAsGuest()
+                        ->post(route('api.v1.auth.tokens.new'), $userData);
+        $loginResponse->assertStatus(200);
+
+        $token = collect($loginResponse->json())->get('token');
+
+        $infoResponse = $this->get(route('api.v1.auth.me'), [
+                            'Authorization' => "Bearer {$token}",
+                        ]);
+        $infoResponse->assertStatus(200);
+
+        $infoData = collect($infoResponse->json());
+
+        $this->assertTrue($infoData->has('role'));
+    }
+
+    /**
+     * Login route must return plan key in response
+     */
+    public function test_login_return_important_keys(): void
+    {
+        $userData = [
+            'email' => 'test@example.com',
+            'password' => 'password',
+        ];
+
+        $user = User::factory()->create($userData);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAsGuest()
+                        ->post(route('api.v1.auth.tokens.new'), $userData);
+        $response->assertStatus(200);
+
+        $responseData = collect($response->json());
+
+        $this->assertTrue($responseData->has('plan'));
+        $this->assertTrue($responseData->has('profile'));
+        $this->assertTrue($responseData->has('role'));
+        $this->assertTrue($responseData->has('token'));
+        $this->assertTrue($responseData->has('used_disk'));
+    }
+
+    /**
+     * User can revoke their current token
+     */
+    public function test_token_can_be_revoked(): void
+    {
+        $userData = [
+            'email' => 'test@example.com',
+            'password' => 'password',
+        ];
+
+        $user = User::factory()->create($userData);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
 
         $loginResponse = $this->actingAsGuest()
                         ->post(route('api.v1.auth.tokens.new'), $userData);
@@ -94,43 +133,27 @@ class AuthTest extends TestCase
 
         User::factory()->create($userData);
 
-        $response = $this->post(route('api.v1.auth.new'), $userData);
-
+        $response = $this->actingAsGuest()
+                    ->post(route('api.v1.auth.new'), $userData);
         $response->assertStatus(422);
 
         $this->assertDatabaseCount(User::class, 1);
     }
 
     /**
-     * 
+     * Validation works as expected
      */
-    // public function test_revoked_token_cannot_be_reuse(): void
-    // {
-    //     User::factory()->create([
-    //         'email' => 'test@example.com',
-    //         'password' => 'password'
-    //     ]);
+    public function test_login_validation_working_as_expected(): void
+    {
+        $response = $this->post(route('api.v1.auth.new'), [
+                        'email' => '',
+                        'password' => '',
+                    ]);
+        $response->assertStatus(422);
 
-    //     $response = $this->actingAsGuest()
-    //                 ->post(route('api.v1.auth.tokens.new'), [
-    //                     'email' => 'test@example.com',
-    //                     'password' => 'password',
-    //                 ]);
-    //     $response->assertStatus(200);
-    //     $responseData = collect($response->json());
+        $errors = collect($response->json('errors'));
 
-    //     $this->assertTrue($responseData->has('token'));
-
-    //     $token = $responseData->get('token');
-
-    //     $response2 = $this->delete(route('api.v1.auth.tokens.delete'), [], [
-    //                     'Authorization' => "Bearer {$token}",
-    //                 ]);
-    //     $response2->assertStatus(204);
-
-    //     $response3 = $this->get(route('api.v1.auth.me'), [
-    //                     'Authorization' => "Bearer {$token}",
-    //                 ]);
-    //     $response3->assertStatus(401);
-    // }
+        $this->assertTrue($errors->has('email'));
+        $this->assertTrue($errors->has('password'));
+    }
 }

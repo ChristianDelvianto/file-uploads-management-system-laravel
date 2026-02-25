@@ -16,8 +16,8 @@ class PlanUserResource extends JsonResource
     {
         return [
             'id' => $this->plan->id, // Easy to check on frontend
+            'name' => $this->plan->name,
             'size' => $this->plan->size,
-            'type' => $this->plan->type,
         ];
     }
 }
