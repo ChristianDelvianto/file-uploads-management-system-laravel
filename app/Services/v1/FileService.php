@@ -81,12 +81,12 @@ class FileService
         try {
             $lock->block(10);
 
-            Storage::disk('public')->putFileAs($uuid, $uploadedFile, $uploadedFile->getClientOriginalName());
+            Storage::putFileAs($uuid, $uploadedFile, $uploadedFile->getClientOriginalName());
 
             if ($fileCategory === 'video') {
                 $thumbnailPath = 'thumbnail_' . Str::random() . '.jpeg';
 
-                Storage::disk('public')->putFileAs($uuid, $thumbnail, $thumbnailPath);
+                Storage::putFileAs($uuid, $thumbnail, $thumbnailPath);
             }
 
             return DB::transaction(function () use ($user, $uploadedFile, $uuid, $fileCategory, $fileExtension, $mimeType, $fileName, $thumbnail, &$thumbnailPath) {
@@ -116,7 +116,7 @@ class FileService
                 return $file;
             });
         } catch (Exception $e) {
-            Storage::disk('public')->deleteDirectory($uuid);
+            Storage::deleteDirectory($uuid);
 
             report($e);
 

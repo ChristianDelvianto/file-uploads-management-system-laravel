@@ -18,16 +18,16 @@ class File extends Model
      * @var list<string>
      */
     protected $fillable = [
-        // 'uuid',
-        'user_id',
+        'uuid',
         'category',
         'extension',
         'mime_type',
-        'original_name',
+        'name',
         'size',
-        'thumbnail',
+        'thumbnail_path',
         'storage_path',
         'disk',
+        'user_id',
     ];
 
     /**
@@ -38,19 +38,8 @@ class File extends Model
     protected $hidden = [
         'id',
         'user_id',
-        'category',
         'disk',
     ];
-
-    /**
-     * 
-     */
-    // protected static function boot(): void
-    // {
-    //     self::creating(function ($model) {
-    //         $model->uuid = Str::uuid();
-    //     });
-    // }
 
     /**
      * Get the attributes that should be cast.
@@ -62,6 +51,14 @@ class File extends Model
         return [
             // 
         ];
+    }
+
+    /**
+     * Get the route key name for Laravel route model binding.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
     }
 
     /**
