@@ -11,14 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('plan_users', function (Blueprint $table) {
+        Schema::create('plan_user_histories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('plan_id')->constrained('plans', 'id')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
             $table->timestamps();
-
-            // Indexes
-            $table->unique('user_id');
         });
     }
 
@@ -27,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('plan_users');
+        Schema::dropIfExists('plan_user_histories');
     }
 };
