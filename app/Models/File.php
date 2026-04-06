@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class File extends Model
@@ -19,13 +20,14 @@ class File extends Model
      */
     protected $fillable = [
         'uuid',
+        'visibility',
         'category',
         'extension',
         'mime_type',
         'name',
-        'size',
-        'thumbnail_path',
-        'storage_path',
+        'bytes_size',
+        'thumbnail_name',
+        'storage_name',
         'disk',
         'user_id',
     ];
@@ -42,23 +44,38 @@ class File extends Model
     ];
 
     /**
+     * The model's default values for attributes.
+     *
+     * @return array<string, any>
+     */
+    protected $attributes = [
+        'visibility' => 'private',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return [
-            // 
-        ];
+        return [];
     }
 
     /**
-     * Get the route key name for Laravel route model binding.
+     * Define route key name for route model binding
      */
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    /**
+     * File has many logs
+     */
+    public function logs(): HasMany
+    {
+        return $this->hasMany(\App\Models\FileLog::class, 'file_id', 'id');
     }
 
     /**
