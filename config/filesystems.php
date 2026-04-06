@@ -80,6 +80,10 @@ return [
     // Added
     'max_file_size' => env('MAX_FILE_SIZE_PER_UPLOAD', 314572800), // 300mb
 
+    'prune_days_gap' => env('PRUNE_DAYS_GAP', 14),
+
+    'file_signed_url_duration' => (int) env('FILE_SIGNED_URL_DURATION', 10), // in minutes
+
     'type' => [
         'document' => [
             'application/msword',
