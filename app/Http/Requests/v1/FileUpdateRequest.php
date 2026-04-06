@@ -11,7 +11,7 @@ class FileUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->id === $this->route('file')->user_id;
+        return true;
     }
 
     /**
@@ -23,6 +23,8 @@ class FileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:1', 'max:255'],
+            'visibility' => ['required', 'string', 'in:private,public,shared'],
+            'emails' => ['required_if:visibility,=,shared', 'array', 'min:1', 'max:20'],
         ];
     }
 }
