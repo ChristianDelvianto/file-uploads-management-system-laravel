@@ -28,7 +28,7 @@ class AuthController extends Controller
      */
     public function userInfo(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user('sanctum');
 
         $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
 
@@ -36,7 +36,7 @@ class AuthController extends Controller
             'plan' => PlanUserResource::make($planUser),
             'profile' => UserResource::make($user),
             'role' => $user->role,
-            'used_disk' => $user->used_disk,
+            'used_bytes' => $user->used_bytes,
         ]);
     }
 
@@ -45,7 +45,7 @@ class AuthController extends Controller
      */
     public function revokeCurrentToken(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $request->user('sanctum')->currentAccessToken()->delete();
 
         return response()->json(null, 204);
     }
@@ -72,7 +72,7 @@ class AuthController extends Controller
             'profile' => UserResource::make($user),
             'role' => $user->role,
             'token' => $plainToken,
-            'used_disk' => $user->used_disk,
+            'used_bytes' => $user->used_bytes,
         ]);
     }
 
