@@ -32,7 +32,11 @@ class AuthService
     {
         try {
             return DB::transaction(function () use ($userData): array {
-                $freePlan = Plan::firstWhere('price', 0);
+                $freePlan = Plan::firstWhere('price_cents', 0);
+
+                if (!$freePlan) {
+                    throw new Exception('Free plan not found.', 500);
+                }
 
                 $user = User::create(['role' => 'user', ...$userData]);
 
@@ -50,6 +54,8 @@ class AuthService
                 ];
             });
         } catch (Exception $e) {
+            report($e);
+
             throw new Exception('Internal server error.', 500);
         }
     }
