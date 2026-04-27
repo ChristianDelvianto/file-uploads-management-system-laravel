@@ -5,11 +5,13 @@ namespace App\Http\Controllers\v1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\v1\AuthNewTokenRequest;
 use App\Http\Requests\v1\AuthNewUserRequest;
-use App\Http\Resources\PlanUserResource;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\v1\PlanUserResource;
+use App\Http\Resources\v1\UserResource;
+use App\Models\Plan;
 use App\Models\PlanUser;
 use App\Models\User;
 use App\Services\v1\AuthService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +20,7 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function __construct(
-        public AuthService $authService,
+        public AuthService $authService
     ) {
         // 
     }
@@ -36,7 +38,7 @@ class AuthController extends Controller
             'plan' => PlanUserResource::make($planUser),
             'profile' => UserResource::make($user),
             'role' => $user->role,
-            'used_bytes' => $user->used_bytes,
+            'used_bytes' => $user->used_bytes
         ]);
     }
 
@@ -72,7 +74,7 @@ class AuthController extends Controller
             'profile' => UserResource::make($user),
             'role' => $user->role,
             'token' => $plainToken,
-            'used_bytes' => $user->used_bytes,
+            'used_bytes' => $user->used_bytes
         ]);
     }
 
@@ -81,8 +83,25 @@ class AuthController extends Controller
      */
     public function newUser(AuthNewUserRequest $request): JsonResponse
     {
-        $responseData = $this->authService->registerNewUser($request->validated());
+        $freePlan = Plan::firstWhere('price_cents', 0);
 
-        return response()->json($responseData);
+        if (!$freePlan) {
+            throw new Exception('Free plan not found.', 500);
+        }
+
+        $user = User::create(['role' => 'user', ...$request->validated()]);
+
+        $planUser = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
+        $planUser->setRelation('plan', $freePlan); // For response
+
+        $plainToken = $this->authService->generateNewToken($user);
+
+        return response()->json([
+            'plan' => PlanUserResource::make($planUser),
+            'profile' => UserResource::make($user),
+            'role' => $user->role,
+            'token' => $plainToken,
+            'used_bytes' => $user->used_bytes
+        ], 201);
     }
 }
