@@ -15,22 +15,23 @@ return new class extends Migration
         Schema::create('files', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-
+            $table->enum('status', ['failed', 'processing', 'completed'])->default('completed');
             $table->enum('visibility', ['private', 'public', 'shared'])->default('private');
-
-            // $table->boolean('is_scanned')->default(false);
+            $table->boolean('is_scanned')->default(false);
+            $table->string('disk', 20); // s3, r2, supabase, gdrive, etc
 
             // Metadata
             $table->string('category', 20);
             $table->string('extension', 40);
             $table->string('mime_type', 100);
-            $table->string('name'); // Original file name
-            $table->unsignedBigInteger('bytes_size', false);
+            $table->string('name'); // Original file name - Slugged
+            $table->unsignedMediumInteger('duration')->nullable(); // Audio & video; In seconds
+            $table->unsignedBigInteger('bytes_size');
             
-            $table->string('thumbnail_name')->nullable(); // For video
             $table->string('storage_name');
-            $table->string('disk', 20); // s3, r2, supabase, gdrive, etc
+            $table->string('thumbnail_name')->nullable(); // For video
             $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
+            // $table->foreignId('folder_id')->nullable()->constrained('folders', 'id')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
 

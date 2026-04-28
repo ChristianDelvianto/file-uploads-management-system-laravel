@@ -13,13 +13,15 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            // To keep things simple, we will use column-based role
             $table->enum('role', ['admin', 'user'])->default('user');
+
             $table->unsignedBigInteger('used_bytes')->default(0);
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
             // $table->rememberToken();
-            $table->timestamp('delete_all_at')->nullable();
+            $table->timestamp('last_delete_all_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamps();
 
