@@ -3,44 +3,23 @@
 namespace App\Http\Controllers\v1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\v1\FileDestroyRequest;
-use App\Http\Requests\v1\FileStoreRequest;
-use App\Http\Requests\v1\FileUpdateRequest;
+use App\Http\Requests\v1\FileUpdateNameRequest;
+use App\Http\Requests\v1\FileUpdateVisibilityRequest;
+use App\Http\Resources\v1\FileResource;
 use App\Models\File;
-use App\Services\v1\FileService;
-use Exception;
+use App\Services\v1\FileDestroyService;
+use App\Services\v1\FileUpdateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Gate;
 
 class FileController extends Controller
 {
     public function __construct(
-        public FileService $fileService,
+        public FileDestroyService $fileDestroyService,
+        public FileUpdateService $fileUpdateService
     ) {
         // 
-    }
-
-    /**
-     * Display a listing of the resource.
-     */
-    // public function index(Request $request)
-    // {
-    //     //
-    // }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(FileStoreRequest $request): JsonResponse
-    {
-        $file = $this->fileService->storeFileAndCreateRecord($request->user(), $request->file('file'), $request->file('thumbnail'));
-
-        return response()->json([
-            'file' => $file,
-        ]);
     }
 
     /**
@@ -48,88 +27,118 @@ class FileController extends Controller
      */
     public function show(Request $request, File $file): JsonResponse
     {
-        $file->load('user');
+        $user = $request->user('sanctum');
+
+        Gate::forUser($user)->authorize('view', $file);
+
+        $file->load(['user']);
 
         return response()->json([
-            'file' => $file,
-        ]);
-    }
-
-    /**
-     * Server file content (for streaming)
-     */
-    public function showContent(Request $request, File $file): BinaryFileResponse|StreamedResponse
-    {
-        $filePath = Storage::path("{$file->uuid}/{$file->name}");
-
-        if ($file->category === 'video') {
-            return response()->stream(function () use ($filePath) {
-                $handle = fopen($filePath, 'rb');
-
-                if ($handle === false) {
-                    throw new Exception('Failed to open file stream.', 500);
-                }
-
-                while (!feof($handle)) {
-                    echo fread($handle, 8192);
-
-                    flush();
-                }
-
-                fclose($handle);
-            });
-        }
-
-        return response()->file($filePath, [
-            'Content-Type' => $file->mime_type,
-        ]);
-    }
-
-    /**
-     * Serve file's thumbnail
-     */
-    public function showThumbnail(Request $request, File $file): BinaryFileResponse
-    {
-        if (!$file->thumbnail_path) {
-            throw new Exception('Thumbnail not available for this file.', 404);
-        }
-
-        $thumbnailPath = Storage::path("{$file->uuid}/{$file->thumbnail_path}");
-
-        return response()->file($thumbnailPath, [
-            'Content-Type' => 'image/jpeg',
+            'item' => FileResource::make($file)
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(FileUpdateRequest $request, File $file): JsonResponse
+    public function updateName(FileUpdateNameRequest $request, File $file): JsonResponse
     {
-        $file = $this->fileService->updateFileRecord($file, $request->validated());
+        $user = $request->user('sanctum');
+
+        Gate::forUser($user)->authorize('update', $file);
+
+        $file = $this->fileUpdateService->updateName($user, $file, $request->validated('name'));
 
         return response()->json([
-            'item' => $file,
+            'item' => FileResource::make($file)
         ]);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Update file's visibility of the specified resource in storage.
      */
-    public function destroy(FileDestroyRequest $request, File $file): JsonResponse
+    public function updateVisibility(FileUpdateVisibilityRequest $request, File $file): JsonResponse
     {
-        $this->fileService->softDeleteFile($file);
+        $user = $request->user('sanctum');
+        
+        Gate::forUser($user)->authorize('update', $file);
+
+        $file = $this->fileUpdateService->updateVisibility(
+                    $user,
+                    $file,
+                    $request->validated('visibility'),
+                    $request->validated('emails')
+                );
+
+        return response()->json([
+            'item' => FileResource::make($file)
+        ]);
+    }
+
+    /**
+     * Permanently delete resource from storage.
+     */
+    public function destroyPermanently(Request $request, string $uuid): JsonResponse
+    {
+        $user = $request->user('sanctum');
+
+        $usedBytes = 0;
+
+        $file = File::withTrashed()->where('uuid', $uuid)->first();
+
+        if (!$file) {
+            $usedBytes = $user->used_bytes;
+        } else {
+            Gate::forUser($user)->authorize('delete', $file);
+
+            $usedBytes = $this->fileDestroyService->permanentlyDeleteTrashed($user, $file);
+        }
+
+        return response()->json([
+            'used_bytes' => $usedBytes
+        ]);
+    }
+
+    /**
+     * Restore soft deleted file.
+     */
+    public function restore(Request $request, string $uuid): JsonResponse
+    {
+        $user = $request->user('sanctum');
+
+        $file = File::withTrashed()->where('uuid', $uuid)->first();
+
+        if (!$file) {
+            abort(404, 'File already deleted permanently.');
+        }
+
+        // @todo - not tested
+        Gate::forUser($user)->authorize('restore', $file);
+
+        if ($file->trashed()) {
+            $this->fileDestroyService->restoreTrashed($user, $file);
+        }
 
         return response()->json(null, 204);
     }
 
     /**
-     * Download a file
+     * Soft delete file.
      */
-    public function download(Request $request, File $file): BinaryFileResponse
+    public function trash(Request $request, string $uuid): JsonResponse
     {
-        $filePath = Storage::path("{$file->uuid}/{$file->name}");
+        $user = $request->user('sanctum');
 
-        return response()->download($filePath, $file->name);
+        $file = File::withTrashed()->where('uuid', $uuid)->first();
+
+        if ($file) {
+            Gate::forUser($user)->authorize('delete', $file);
+        }
+
+        if (!$file?->trashed()) {
+            $this->fileDestroyService->setAsTrashed($user, $file);
+        }
+
+        return response()->json(null, 204);
     }
 }
