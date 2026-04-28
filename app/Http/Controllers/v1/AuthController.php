@@ -89,7 +89,11 @@ class AuthController extends Controller
             throw new Exception('Free plan not found.', 500);
         }
 
-        $user = User::create(['role' => 'user', ...$request->validated()]);
+        $user = User::create([
+                    'role' => 'user',
+                    'password' => Hash::make($request->validated('password')),
+                    ...$request->except(['password'])
+                ]);
 
         $planUser = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
         $planUser->setRelation('plan', $freePlan); // For response
