@@ -20,16 +20,19 @@ class File extends Model
      */
     protected $fillable = [
         'uuid',
+        'status',
         'visibility',
+        'is_scanned',
+        'disk',
         'category',
         'extension',
         'mime_type',
         'name',
+        'duration',
         'bytes_size',
-        'thumbnail_name',
         'storage_name',
-        'disk',
-        'user_id',
+        'thumbnail_name',
+        'user_id'
     ];
 
     /**
@@ -39,8 +42,8 @@ class File extends Model
      */
     protected $hidden = [
         'id',
-        'user_id',
         'disk',
+        'user_id'
     ];
 
     /**
@@ -49,7 +52,9 @@ class File extends Model
      * @return array<string, any>
      */
     protected $attributes = [
+        'status' => 'completed',
         'visibility' => 'private',
+        'is_scanned' => false
     ];
 
     /**
@@ -59,7 +64,10 @@ class File extends Model
      */
     protected function casts(): array
     {
-        return [];
+        return [
+            'is_scanned' => 'boolean',
+            'last_action_at' => 'datetime'
+        ];
     }
 
     /**
@@ -71,12 +79,20 @@ class File extends Model
     }
 
     /**
-     * File has many logs
+     * File has many activities
      */
-    public function logs(): HasMany
+    public function activities(): HasMany
     {
-        return $this->hasMany(\App\Models\FileLog::class, 'file_id', 'id');
+        return $this->hasMany(\App\Models\FileActivity::class, 'file_id', 'id');
     }
+
+    /**
+     * 
+     */
+    // public function shared(): BelongsToMany
+    // {
+    //     return $this->belongsToMany(\App\Models\User::class, 'file_shared', 'file_id', 'user_id', 'id', 'id');
+    // }
 
     /**
      * File belongs to User

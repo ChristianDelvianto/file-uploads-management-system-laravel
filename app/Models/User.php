@@ -22,10 +22,11 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'role',
-        'used_disk',
+        'used_bytes',
         'name',
         'email',
         'password',
+        'last_delete_all_at'
     ];
 
     /**
@@ -36,7 +37,18 @@ class User extends Authenticatable
     protected $hidden = [
         'role',
         'password',
-        // 'remember_token',
+        // 'remember_token'
+    ];
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @return array<string, any>
+     */
+    protected $attributes = [
+        'role' => 'user',
+        'used_bytes' => 0,
+        'last_delete_all_at' => null
     ];
 
     /**
@@ -48,8 +60,16 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
-            'email_verified_at' => 'datetime',
+            'email_verified_at' => 'datetime'
         ];
+    }
+
+    /**
+     * User has many activities
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(\App\Models\UserActivity::class, 'user_id', 'id');
     }
 
     /**
