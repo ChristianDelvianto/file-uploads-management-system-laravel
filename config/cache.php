@@ -115,7 +115,7 @@ return [
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
     // Added
-    'lock_duration' => (int) env('CACHE_LOCK_DURATION', 10), // Seconds
-    'lock_timeout' => (int) env('CACHE_LOCK_TIMEOUT', 10), // Seconds
+    'cache_lock_duration' => (int) env('CACHE_LOCK_DURATION', 10), // In seconds
+    'cache_lock_timeout' => (int) env('CACHE_LOCK_TIMEOUT', 10), // In seconds
 
 ];

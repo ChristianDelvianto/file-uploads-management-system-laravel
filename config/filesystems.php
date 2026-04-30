@@ -78,11 +78,12 @@ return [
     ],
 
     // Added
-    'max_file_size' => env('MAX_FILE_SIZE_PER_UPLOAD', 314572800), // 300mb
-
-    'prune_days_gap' => env('PRUNE_DAYS_GAP', 14),
-
-    'file_signed_url_duration' => (int) env('FILE_SIGNED_URL_DURATION', 10), // in minutes
+    'file_signed_url_duration_multiplier' =>    (int) env('FILE_SIGNED_URL_DURATION_MULTIPLIER', 3), // file's duration * {x} (For audio and video)
+    'file_prune_days_gap' =>                    (int) env('FILE_PRUNE_DAYS_GAP', 14),
+    'max_chunk_size_per_request' =>             (int) env('MAX_CHUNK_SIZE_PER_REQUEST', 10485760), // 10 MB
+    'max_file_size_to_scan' =>                  (int) env('MAX_FILE_SIZE_TO_SCAN', 104857600), // 100 MB
+    'max_file_size_to_skip_queue_merge' =>      (int) env('MAX_FILE_SIZE_TO_SKIP_QUEUE_MERGE', 1048576000), // 1 GB
+    'min_file_min_signed_url_duration' =>       (int) env('MIN_FILE_SIGNED_URL_DURATION', 600), // In seconds
 
     'type' => [
         'document' => [
@@ -93,7 +94,7 @@ return [
             'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-            'text/plain',
+            'text/plain'
         ]
     ]
 ];
