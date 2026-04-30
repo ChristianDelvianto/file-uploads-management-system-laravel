@@ -21,14 +21,28 @@ class FileFactory extends Factory
         $category = explode('/', $mime)[0];
         $extension = explode('/', $mime)[1];
 
+        $duration = $category === 'video' || $category === 'audio'
+                    ? fake()->numberBetween(30, 3600)
+                    : null;
+
+        $thumbnailName = $category === 'video'
+                        ? 'file_thumbnail.jpeg'
+                        : null;
+
         return [
+            'uuid' => fake()->uuid(),
+            'status' => 'completed', // 'failed', 'processing', 'completed'
+            'visibility' => 'private', // 'private', 'public', 'shared'
+            'is_scanned' => false,
+            'disk' => fake()->randomElement(['azure', 'gdrive', 'local', 'r2', 'supabase', 's3']),
             'category' => $category,
+            'extension' => $extension,
             'mime_type' => $mime,
-            'name' => fake()->words(6, true) . ".{$extension}",
-            'size' => fake()->numberBetween(5 * 1024),
-            'thumbnail_path' => null,
-            'storage_path' => 'somewhere_to_put',
-            'disk' => fake()->randomElement(['s3', 'local', 'r2', 'gdrive']),
+            'name' => fake()->words(6, true),
+            'duration' => $duration,
+            'bytes_size' => fake()->numberBetween(5 * 1024),
+            'storage_name' => 'somewhere_in_the_storage.' . $extension,
+            'thumbnail_name' => $thumbnailName
         ];
     }
 
@@ -38,7 +52,7 @@ class FileFactory extends Factory
     public function deleted(): static
     {
         return $this->state(fn (array $attributes) => [
-            'deleted_at' => now(),
+            'deleted_at' => now()
         ]);
     }
 }

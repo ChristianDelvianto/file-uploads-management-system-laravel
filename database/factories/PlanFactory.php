@@ -18,9 +18,9 @@ class PlanFactory extends Factory
     {
         return [
             'name' => fake()->word(rand(2, 3)),
-            'price' => fake()->numberBetween(20, 500),
+            'price_cents' => fake()->numberBetween(20, 500),
             'is_active' => true,
-            'size' => fake()->numberBetween(1e7, 10e8),
+            'limit_bytes' => fake()->numberBetween(1e7, 10e8)
         ];
     }
 }
