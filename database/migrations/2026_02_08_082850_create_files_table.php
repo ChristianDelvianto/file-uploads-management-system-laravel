@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('status', ['failed', 'processing', 'completed'])->default('completed');
             $table->enum('visibility', ['private', 'public', 'shared'])->default('private');
             $table->boolean('is_scanned')->default(false);
-            $table->string('disk', 20); // s3, r2, supabase, gdrive, etc
+            $table->string('disk', 20); // 'azure', 'gdrive', 'local', 'r2', 'supabase', 's3', etc
 
             // Metadata
             $table->string('category', 20);
@@ -36,15 +36,8 @@ return new class extends Migration
             $table->softDeletes();
 
             // Indexes
-
-            // User-Pattern
             $table->index(['user_id', 'category', 'deleted_at', 'created_at']);
-            $table->index(['user_id', 'name', 'category', 'deleted_at', 'created_at']);
             $table->index(['user_id', 'deleted_at']);
-
-            // Admin-Pattern (Global)
-            $table->index(['deleted_at', 'created_at']);
-            $table->index(['bytes_size', 'deleted_at']);
         });
 
         // Full-Text index
