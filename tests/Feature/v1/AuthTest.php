@@ -7,7 +7,6 @@ use App\Models\PlanUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -19,9 +18,9 @@ class AuthTest extends TestCase
      */
     public function test_guest_cannot_fetch_profile_info(): void
     {
-        $response = $this->actingAsGuest()
-                    ->get(route('api.v1.auth.me'));
-        $response->assertStatus(401);
+        $this->actingAsGuest()
+        ->get(route('api.v1.auth.info'))
+        ->assertUnauthorized();
     }
 
     /**
@@ -29,9 +28,9 @@ class AuthTest extends TestCase
      */
     public function test_guest_cannot_access_revoke_token_route(): void
     {
-        $response = $this->actingAsGuest()
-                    ->delete(route('api.v1.auth.tokens.delete'));
-        $response->assertStatus(401);
+        $this->actingAsGuest()
+        ->delete(route('api.v1.auth.tokens.delete'))
+        ->assertUnauthorized();
     }
 
     /**
@@ -39,25 +38,24 @@ class AuthTest extends TestCase
      */
     public function test_info_route_returns_role(): void
     {
-        $userData = [
-            'email' => 'test@example.com',
-            'password' => 'password',
-        ];
+        $userData = ['email' => 'test@example.com', 'password' => 'password'];
 
         $user = User::factory()->create($userData);
-        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price_cents' => 0, 'limit_bytes' => 536870912]);
         PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
 
+        // 1. Login and get token
         $loginResponse = $this->actingAsGuest()
                         ->post(route('api.v1.auth.tokens.new'), $userData);
-        $loginResponse->assertStatus(200);
+        $loginResponse->assertOk();
 
         $token = collect($loginResponse->json())->get('token');
 
-        $infoResponse = $this->get(route('api.v1.auth.me'), [
-                            'Authorization' => "Bearer {$token}",
+        // 2. Fetch profile info
+        $infoResponse = $this->get(route('api.v1.auth.info'), [
+                            'Authorization' => "Bearer {$token}"
                         ]);
-        $infoResponse->assertStatus(200);
+        $infoResponse->assertOk();
 
         $infoData = collect($infoResponse->json());
 
@@ -71,16 +69,16 @@ class AuthTest extends TestCase
     {
         $userData = [
             'email' => 'test@example.com',
-            'password' => 'password',
+            'password' => 'password'
         ];
 
         $user = User::factory()->create($userData);
-        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price_cents' => 0, 'limit_bytes' => 536870912]);
         PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
 
         $response = $this->actingAsGuest()
-                        ->post(route('api.v1.auth.tokens.new'), $userData);
-        $response->assertStatus(200);
+                    ->post(route('api.v1.auth.tokens.new'), $userData);
+        $response->assertOk();
 
         $responseData = collect($response->json());
 
@@ -88,7 +86,7 @@ class AuthTest extends TestCase
         $this->assertTrue($responseData->has('profile'));
         $this->assertTrue($responseData->has('role'));
         $this->assertTrue($responseData->has('token'));
-        $this->assertTrue($responseData->has('used_disk'));
+        $this->assertTrue($responseData->has('used_bytes'));
     }
 
     /**
@@ -98,16 +96,17 @@ class AuthTest extends TestCase
     {
         $userData = [
             'email' => 'test@example.com',
-            'password' => 'password',
+            'password' => 'password'
         ];
 
         $user = User::factory()->create($userData);
-        $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'size' => 0]);
+        $freePlan = Plan::factory()->create(['name' => 'Free', 'price_cents' => 0, 'limit_bytes' => 536870912]);
         PlanUser::factory()->create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
 
+        // 1. Login and get token
         $loginResponse = $this->actingAsGuest()
                         ->post(route('api.v1.auth.tokens.new'), $userData);
-        $loginResponse->assertStatus(200);
+        $loginResponse->assertOk();
 
         $loginData = collect($loginResponse->json());
 
@@ -115,10 +114,11 @@ class AuthTest extends TestCase
 
         $token = $loginData->get('token');
 
+        // 2. Revoke token
         $revokeTokenResponse = $this->delete(route('api.v1.auth.tokens.delete'), [], [
-                                    'Authorization' => "Bearer {$token}",
+                                    'Authorization' => "Bearer {$token}"
                                 ]);
-        $revokeTokenResponse->assertStatus(204);
+        $revokeTokenResponse->assertNoContent();
     }
 
     /**
@@ -128,7 +128,7 @@ class AuthTest extends TestCase
     {
         $userData = [
             'email' => 'test@example.com',
-            'password' => 'password',
+            'password' => 'password'
         ];
 
         User::factory()->create($userData);
@@ -147,7 +147,7 @@ class AuthTest extends TestCase
     {
         $response = $this->post(route('api.v1.auth.new'), [
                         'email' => '',
-                        'password' => '',
+                        'password' => ''
                     ]);
         $response->assertStatus(422);
 
