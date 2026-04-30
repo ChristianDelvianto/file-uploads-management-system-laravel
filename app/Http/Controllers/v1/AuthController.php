@@ -32,7 +32,7 @@ class AuthController extends Controller
     {
         $user = $request->user('sanctum');
 
-        $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
+        $planUser = $this->authService->getUserPlan($user);
 
         return response()->json([
             'plan' => PlanUserResource::make($planUser),
@@ -65,7 +65,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $planUser = PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
+        $planUser = $this->authService->getUserPlan($user);
 
         $plainToken = $this->authService->generateNewToken($user);
 

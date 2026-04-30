@@ -2,6 +2,7 @@
 
 namespace App\Services\v1;
 
+use App\Models\PlanUser;
 use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Str;
@@ -23,5 +24,16 @@ class AuthService
         $token = $user->createToken($tokenName, $abilities, $expiresAt);
 
         return $token->plainTextToken;
+    }
+
+    /**
+     * Get user's current plan
+     * 
+     * @param \App\Models\User $user
+     * @return \App\Models\PlanUser with loaded plan relation
+     */
+    public function getUserPlan(User $user): PlanUser
+    {
+        return PlanUser::with(['plan'])->firstWhere('user_id', $user->id);
     }
 }
