@@ -18,25 +18,28 @@ Route::apiResource('files.activities', FileActivityController::class)
 Route::prefix('files/{uuid}')
 ->as('files.')
 ->group(function () {
+    Route::get('/', [FileController::class, 'show'])
+    ->name('show');
+
     Route::middleware(['auth:sanctum', 'role:user'])
     ->group(function () {
-        Route::delete('/', [FileController::class, 'destroyTrashed'])
+        Route::delete('/', [FileController::class, 'destroyTrash'])
         ->name('destroy');
 
-        Route::match(['put', 'patch'], 'restore', [FileController::class, 'restore'])
+        Route::patch('restore', [FileController::class, 'restoreFromTrash'])
         ->name('restore');
 
-        Route::match(['put', 'patch'], 'trash', [FileController::class, 'trash'])
+        Route::patch('trash', [FileController::class, 'markAsTrash'])
         ->name('trash');
 
         // Update file's name and visibility
         Route::prefix('update')
         ->as('update.')
         ->group(function () {
-            Route::match(['put', 'patch'], 'name', [FileController::class, 'updateName'])
+            Route::put('name', [FileController::class, 'updateName'])
             ->name('name');
 
-            Route::match(['put', 'patch'], 'visibility', [FileController::class, 'updateVisibility'])
+            Route::put('visibility', [FileController::class, 'updateVisibility'])
             ->name('visibility');
         });
     });
@@ -55,8 +58,8 @@ Route::prefix('files/{uuid}')
         Route::get('thumbnail/{thumbnailName}', [FileContentController::class, 'showThumbnail'])
         ->name('thumbnail');
 
-        Route::prefix('trashed')
-        ->as('trashed.')
+        Route::prefix('trash')
+        ->as('trash.')
         ->group(function () {
             Route::get('main/{storageName}', [FileTrashedContentController::class, 'showTrashedContent'])
             ->name('main');
@@ -75,7 +78,8 @@ Route::prefix('files/{uuid}')
         Route::get('download', [FileLinkController::class, 'download'])
         ->name('download');
 
-        // Route::put('share', [FileLinkController::class, ''])->middleware(['auth:sanctum', 'role:user'])
-        // ->name('');
+        Route::put('share', [FileLinkController::class, 'share'])
+        ->middleware(['auth:sanctum', 'role:user'])
+        ->name('share');
     });
 });
