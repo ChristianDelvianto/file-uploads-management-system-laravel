@@ -11,21 +11,16 @@ Route::apiResource('files', FileController::class)
 ->middlewareFor(['restore'], ['auth:sanctum', 'role:user'])
 ->only(['restore', 'show']);
 
-// File activities
 Route::apiResource('files.activities', FileActivityController::class)
 ->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
 ->only(['index', 'store']);
-
-// Route::apiResource('files.reports', FileReportController::class)
-// ->middlewareFor([], [])
-// ->only([]);
 
 Route::prefix('files/{uuid}')
 ->as('files.')
 ->group(function () {
     Route::middleware(['auth:sanctum', 'role:user'])
     ->group(function () {
-        Route::delete('/', [FileController::class, 'destroyPermanently'])
+        Route::delete('/', [FileController::class, 'destroyTrashed'])
         ->name('destroy');
 
         Route::match(['put', 'patch'], 'restore', [FileController::class, 'restore'])
@@ -34,6 +29,7 @@ Route::prefix('files/{uuid}')
         Route::match(['put', 'patch'], 'trash', [FileController::class, 'trash'])
         ->name('trash');
 
+        // Update file's name and visibility
         Route::prefix('update')
         ->as('update.')
         ->group(function () {
@@ -45,6 +41,7 @@ Route::prefix('files/{uuid}')
         });
     });
 
+    // Serve file content and thumbnail
     Route::prefix('content')
     ->as('content.')
     ->middleware(['signed'])
