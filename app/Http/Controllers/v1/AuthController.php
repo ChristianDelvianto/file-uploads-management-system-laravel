@@ -86,14 +86,15 @@ class AuthController extends Controller
         $freePlan = Plan::firstWhere('price_cents', 0);
 
         if (!$freePlan) {
-            throw new Exception('Free plan not found.', 500);
+            $exception = new Exception('Free plan not found.', 500);
+
+            report($exception);
+
+            throw $exception;
         }
 
-        $user = User::create([
-                    'role' => 'user',
-                    'password' => Hash::make($request->validated('password')),
-                    ...$request->except(['password'])
-                ]);
+        // Password will be hashed by User model's cast
+        $user = User::create(['role' => 'user', ...$request->validated()]);
 
         $planUser = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
         $planUser->setRelation('plan', $freePlan); // For response
