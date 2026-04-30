@@ -21,9 +21,12 @@ class FileUpdateVisibilityRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->user('sanctum');
+
         return [
             'visibility' => ['required', 'string', 'in:private,public,shared'],
-            'emails' => ['required_if:visibility,=,shared', 'array', 'min:1', 'max:20'],
+            'emails' => ['required_if:visibility,=,shared', 'array', 'min:1', 'max:10'],
+            'emails.*' => ['email', 'exists:users,email', 'not_in:' . $user->email]
         ];
     }
 }
