@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -87,12 +88,12 @@ class File extends Model
     }
 
     /**
-     * 
+     * Get the users that the file is shared with
      */
-    // public function shared(): BelongsToMany
-    // {
-    //     return $this->belongsToMany(\App\Models\User::class, 'file_shared', 'file_id', 'user_id', 'id', 'id');
-    // }
+    public function shares(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'file_shares', 'file_id', 'user_id', 'id', 'id');
+    }
 
     /**
      * File belongs to User
