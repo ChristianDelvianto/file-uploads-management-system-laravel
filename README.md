@@ -1,59 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+[In development] Cloud Storage Backend Project
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Project Overview
 
-## About Laravel
+A cloud storage backend project is a web application that provides users with the ability to upload, store, and manage their files in the cloud. The project is designed to be secure, efficient, and scalable, allowing users to easily access their files from anywhere with an internet connection. The backend of the application is built using PHP and Laravel, which provides a robust framework for handling file uploads, user authentication, and data management.
+The project includes features such as file sharing, access control, and quota management to ensure that users can effectively manage their storage space and share with others. Overall, this cloud storage backend project serves as a demonstration of my skills in web development, system design, and problem-solving, deciding trade-offs, and is intended to showcase my capabilities as a developer.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+# Key Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- User authentication and authorization
+- File upload and download functionality
+- File sharing, access control and link generation for viewing and downloading files
+- File deletion and trash management
+- Quota management to enforce storage limits based on user plans
+- Queue to process file uploads and deletions asynchronously, improving performance and user experience
+- Data integrity and security measures to protect user data and ensure reliable file storage
+- Comprehensive testing to ensure reliability and robustness
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# Technologies Used
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.3+
+- Laravel 12
+- MySQL
+- PHPUnit for testing
+- Laravel Sanctum for API authentication
+- Laragon for local development
+- Laravel Queue for asynchronous processing
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# Assumptions
 
-### Premium Partners
+- Role-based access control between Admin and User intended to be simple, using `role` field in the `users` table to differentiate between admin and regular users. This approach is sufficient for the scope of this project, but may not be suitable for more complex applications with multiple roles and permissions.
+- Payment is omitted from this project, the project focuses solely on the backend file storage functionality, user experience, and data integrity.
+- Admin functionality is omitted from this project, the project focuses solely on the user-facing features and does not include an administrative interface nor functionality for managing users, files, or system settings.
+- The project developed with scalability in mind, but **_it is not designed to handle extremely high traffic or large-scale deployments._** It is intended for small-sized applications and may require additional optimizations and infrastructure to support larger workloads.
+- All operations are designed to be atomic, **_ensuring that either complete successfully or fail without leaving the system in an inconsistent state_**. This is achieved through the use of database transactions and careful error handling.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+# Disclaimer
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**This project is a portfolio piece and is not intended for production use**. It is designed to demonstrate my skills and capabilities as a developer, and may not include all the features, optimizations, or security measures that would be necessary for a production-ready application. It is important to thoroughly review and test the code before using it in any real-world applications, and to make any necessary adjustments or improvements to ensure that it meets the specific requirements of your project.
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Conclusion
 
-## Security Vulnerabilities
+In conclusion, this cloud storage backend project is a demonstration of my ability to design and implement a secure, efficient, and scalable file storage solution. It includes a range of features and technologies that are commonly used in modern web applications, and is designed to be maintainable and extensible for future development. I hope that this project provides a clear example of my skills, system design, how I approach problem-solving, and also capabilities as a developer. I welcome any feedback or questions about the project, and I am open to discussing how it can be improved or extended in the future.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+To see more details about how specific features work, please refer to the following documents:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- [Architecture](DOCS/ARCHITECTURE.md) The architecture of the application, including the design of the data models, controllers, services, and repositories, as well as the relationships between different components of the system.
+- [Trade-offs](DOCS/TRADE_OFFS.md) The trade-offs made in the architectural decisions, including the pros and cons of each decision and how they impact the overall design and functionality of the application.
+- [Testing](DOCS/TESTING.md) The testing strategy and approach used in the application, including the types of tests implemented, and the focus of the testing.
+- [Edge Cases](DOCS/EDGE_CASES.md) The edge cases that were considered and handled in the application, including how the application handles unexpected inputs, errors, and other scenarios that may arise in real-world usage.
+- [How File Access Works](DOCS/HOW_FILE_ACCESS_WORKS.md) How file access works, including file sharing, access control, and link generation for viewing and downloading files.
+- [How File Delete Works](DOCS/HOW_FILE_DELETE_WORKS.md) How file deletion works, including the process of moving files to trash and permanently deleting them.
+- [How Clear Trashed Works](DOCS/HOW_CLEAR_TRASHED_WORKS.md) How the process of clearing trashed files works, including the criteria for determining when to clear trashed files and the process for permanently deleting them.
+
+--- 
+
+# Note
+
+Feedback is welcome and appreciated. If you have any questions, suggestions, or would like to discuss the project further, please feel free to reach out to me. I am always open to constructive feedback and opportunities for collaboration.
+
+---
+
+# License
+
+My project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+---
