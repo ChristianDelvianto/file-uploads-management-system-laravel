@@ -3,8 +3,8 @@
 use App\Http\Controllers\v1\FileController;
 use App\Http\Controllers\v1\FileActivityController;
 use App\Http\Controllers\v1\FileContentController;
+use App\Http\Controllers\v1\FileContentTrashedController;
 use App\Http\Controllers\v1\FileLinkController;
-use App\Http\Controllers\v1\FileTrashedContentController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('files', FileController::class)
@@ -15,7 +15,7 @@ Route::apiResource('files.activities', FileActivityController::class)
 ->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
 ->only(['index', 'store']);
 
-Route::prefix('files/{uuid}')
+Route::prefix('files/{file}')
 ->as('files.')
 ->group(function () {
     Route::get('/', [FileController::class, 'show'])
@@ -23,6 +23,7 @@ Route::prefix('files/{uuid}')
 
     Route::middleware(['auth:sanctum', 'role:user'])
     ->group(function () {
+        // Permanent delete
         Route::delete('/', [FileController::class, 'destroyTrash'])
         ->name('destroy');
 
@@ -50,7 +51,7 @@ Route::prefix('files/{uuid}')
     ->middleware(['signed'])
     ->group(function () {
         Route::get('download/{storageName}', [FileContentController::class, 'downloadContent'])
-        ->name('content');
+        ->name('download');
 
         Route::get('main/{storageName}', [FileContentController::class, 'showContent'])
         ->name('main');
@@ -58,13 +59,14 @@ Route::prefix('files/{uuid}')
         Route::get('thumbnail/{thumbnailName}', [FileContentController::class, 'showThumbnail'])
         ->name('thumbnail');
 
+        // Only for file owner
         Route::prefix('trash')
         ->as('trash.')
         ->group(function () {
-            Route::get('main/{storageName}', [FileTrashedContentController::class, 'showTrashedContent'])
+            Route::get('main/{storageName}', [FileContentTrashedController::class, 'showTrashedContent'])
             ->name('main');
 
-            Route::get('thumbnail/{thumbnailName}', [FileTrashedContentController::class, 'showTrashedThumbnail'])
+            Route::get('thumbnail/{thumbnailName}', [FileContentTrashedController::class, 'showTrashedThumbnail'])
             ->name('thumbnail');
         });
     });
