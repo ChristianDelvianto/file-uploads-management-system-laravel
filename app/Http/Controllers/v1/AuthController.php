@@ -26,16 +26,19 @@ class AuthController extends Controller
     }
 
     /**
-     * Send user info, (this is when app first load)
+     * Send user info
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function userInfo(Request $request): JsonResponse
     {
         $user = $request->user('sanctum');
 
-        $planUser = $this->authService->getUserPlan($user);
+        $userPlan = $this->authService->getUserPlan($user);
 
         return response()->json([
-            'plan' => PlanUserResource::make($planUser),
+            'plan' => PlanUserResource::make($userPlan),
             'profile' => UserResource::make($user),
             'role' => $user->role,
             'used_bytes' => $user->used_bytes
@@ -44,6 +47,9 @@ class AuthController extends Controller
 
     /**
      * Revoke user's current access token
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function revokeCurrentToken(Request $request): JsonResponse
     {
@@ -54,6 +60,9 @@ class AuthController extends Controller
 
     /**
      * Generate a new access token with the right credentials
+     * 
+     * @param \App\Http\Requests\v1\AuthNewTokenRequest $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function newToken(AuthNewTokenRequest $request): JsonResponse
     {
@@ -65,12 +74,12 @@ class AuthController extends Controller
             ]);
         }
 
-        $planUser = $this->authService->getUserPlan($user);
+        $userPlan = $this->authService->getUserPlan($user);
 
         $plainToken = $this->authService->generateNewToken($user);
 
         return response()->json([
-            'plan' => PlanUserResource::make($planUser),
+            'plan' => PlanUserResource::make($userPlan),
             'profile' => UserResource::make($user),
             'role' => $user->role,
             'token' => $plainToken,
@@ -80,6 +89,9 @@ class AuthController extends Controller
 
     /**
      * Store new user record
+     * 
+     * @param \App\Http\Requests\v1\AuthNewUserRequest $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function newUser(AuthNewUserRequest $request): JsonResponse
     {
@@ -96,13 +108,13 @@ class AuthController extends Controller
         // Password will be hashed by User model's cast
         $user = User::create(['role' => 'user', ...$request->validated()]);
 
-        $planUser = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
-        $planUser->setRelation('plan', $freePlan); // For response
+        $userPlan = PlanUser::create(['plan_id' => $freePlan->id, 'user_id' => $user->id]);
+        $userPlan->setRelation('plan', $freePlan); // For response
 
         $plainToken = $this->authService->generateNewToken($user);
 
         return response()->json([
-            'plan' => PlanUserResource::make($planUser),
+            'plan' => PlanUserResource::make($userPlan),
             'profile' => UserResource::make($user),
             'role' => $user->role,
             'token' => $plainToken,
