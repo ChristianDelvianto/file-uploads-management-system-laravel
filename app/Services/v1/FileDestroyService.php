@@ -4,14 +4,22 @@ namespace App\Services\v1;
 
 use App\Models\File;
 use App\Models\User;
+use App\Services\v1\FileCacheService;
+use App\Services\v1\UserCacheService;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class FileDestroyService
 {
+    public function __construct(
+        public FileCacheService $fileCacheService,
+        public UserCacheService $userCacheService
+    ) {
+        // 
+    }
+
     /**
      * Permanently delele a trashed file and return user's used_bytes
      * 
@@ -19,113 +27,64 @@ class FileDestroyService
      * @param \App\Models\File $file
      * @return int user's used_bytes
      */
-    public function permanentlyDeleteTrashed(User $user, File $file): int
+    public function permanentlyDeleteTrash(User $user, File $file): int
     {
-        $fileLock = Cache::lock();
-        $userLock = Cache::lock("user:{$user->id}:update", config('cache.cache_lock_duration'));
+        $fileCacheLock = $this->fileCacheService->getUpdateLock($file);
+        $userCacheLock = $this->userCacheService->getUpdateLock($user);
 
         try {
-            if (!$fileLock->get()) {
-                throw new Exception('File is currently busy, please try again.', 429);
+            if (!$fileCacheLock->get()) {
+                throw new Exception('File is being updated by another process. Please try again later.', 423);
             }
 
-            $userLock->block(config('cache.cache_lock_timeout'));
+            if (!$userCacheLock->get()) {
+                throw new Exception('User data is being updated by another process. Please try again later.', 423);
+            }
 
-            $newUsedBytes = DB::transaction(function () use ($file, $user) {
-                                $user = User::where('id', $user->id)->lockForUpdate()->first();
+            $usedBytes = DB::transaction(function () use ($file, $user): int {
+                            $user = User::where('id', $user->id)->lockForUpdate()->first();
 
-                                $file = File::withTrashed()->where('id', $file->id)->lockForUpdate()->first();
+                            $file = File::withTrashed()->where('uuid', $file->uuid)->lockForUpdate()->first();
 
-                                if (!$file) {
-                                    return $user->used_bytes;
-                                }
+                            if (!$file) {
+                                return $user->used_bytes;
+                            }
 
-                                if (!$file->trashed()) {
-                                    throw new Exception('File is restored, please check your files.', 400);
-                                }
+                            if (!$file->trashed()) {
+                                throw new Exception('File is restored, please check your files.', 400);
+                            }
 
-                                $pruneDaysGap = config('filesystem.file_prune_days_gap');
-                                $fileDeletedTimestamp = Carbon::parse($file->deleted_at);
+                            // $pruneDaysGap = config('filesystem.file_prune_days_gap');
+                            // $fileDeletedTimestamp = Carbon::parse($file->deleted_at);
 
-                                // File already permanently deleted
-                                if (Carbon::now()->diffInMicroseconds($fileDeletedTimestamp, true) > 0) {
-                                    return $user->used_bytes;
-                                }
+                            // if (Carbon::now()->diffInMicroseconds($fileDeletedTimestamp, true) > 0) {
+                            //     return $user->used_bytes;
+                            // }
 
-                                // Get total new user's used_bytes
-                                $newUsedBytes = $user->used_bytes - $file->bytes_size;
+                            // Get total new user's used_bytes
+                            $newUsedBytes = $user->used_bytes - $file->bytes_size;
 
-                                if ($newUsedBytes < 0) {
-                                    throw new Exception('Something went wrong, please try again.', 500);
-                                }
+                            if ($newUsedBytes < 0) {
+                                throw new Exception('Something went wrong, please try again.', 500);
+                            }
 
-                                $user->update(['used_bytes' => $newUsedBytes]);
+                            $user->update(['used_bytes' => $newUsedBytes]);
 
-                                $file->forceDelete();
+                            $file->forceDelete();
 
-                                return $newUsedBytes;
-                            });
+                            return $newUsedBytes;
+                        });
 
             Storage::disk($file->disk)->deleteDirectory("files/{$file->uuid}");
 
-            return $newUsedBytes;
+            return $usedBytes;
         } catch (Exception $e) {
             report($e);
 
             throw $e;
         } finally {
-            $userLock?->release();
-            $fileLock?->release();
-        }
-    }
-
-    /**
-     * Restore trashed file
-     * 
-     * @param \App\Models\User $user
-     * @param \App\Models\file $file
-     * @return void
-     */
-    public function restoreTrashed(User $user, File $file): void
-    {
-        $lock = Cache::lock("file:{$file->id}:update", config('cache.cache_lock_duration'));
-
-        try {
-            $lock->block(config('cache.cache_lock_timeout'));
-
-            DB::transaction(function () use ($file, $user) {
-                $file = File::withTrashed()->where('id', $file->id)->lockForUpdate()->first();
-
-                 // File already deleted permanently
-                if (!$file) {
-                    throw new Exception('File not found.', 404);
-                }
-                
-                // File already restored
-                if (!$file->trashed()) {
-                    return;
-                }
-
-                $user = User::where('id', $user->id)->lockForUpdate()->first();
-
-                // @todo - not tested
-                // If file deleted_at older than user's last_delete_all_at, it means the file permanently deleted by user's delete all action, so we should return not found
-                $fileDeletedTimestamp = Carbon::parse($file->deleted_at);
-
-                if (isset($user->last_delete_all_at) && Carbon::parse($user->last_delete_all_at)->diffInSeconds($fileDeletedTimestamp) > 0) {
-                    throw new Exception('File not found.', 404);
-                }
-                
-                $file->restore();
-
-                $user->activities()->create(['action' => 'restore', 'file_id' => $file->id]);
-            });
-        } catch (Exception $e) {
-            report($e);
-
-            throw $e;
-        } finally {
-            $lock?->release();
+            $userCacheLock?->release();
+            $fileCacheLock?->release();
         }
     }
 
@@ -136,15 +95,17 @@ class FileDestroyService
      * @param \App\Models\file $file
      * @return void
      */
-    public function setAsTrashed(User $user, File $file): void
+    public function putToTrash(User $user, File $file): void
     {
-        $lock = Cache::lock("file:{$file->id}:update", config('cache.cache_lock_duration'));
+        $fileCacheLock = $this->fileCacheService->getUpdateLock($file);
 
         try {
-            $lock->block(config('cache.cache_lock_timeout'));
+            if (!$fileCacheLock->get()) {
+                throw new Exception('File is being updated by another process. Please try again later.', 423);
+            }
 
             DB::transaction(function () use ($file, $user) {
-                $file = File::withTrashed()->where('id', $file->id)->lockForUpdate()->first();
+                $file = File::withTrashed()->where('uuid', $file->uuid)->lockForUpdate()->first();
 
                 // File already deleted permanently
                 if (!$file) {
@@ -165,7 +126,59 @@ class FileDestroyService
 
             throw $e;
         } finally {
-            $lock?->release();
+            $fileCacheLock?->release();
+        }
+    }
+
+    /**
+     * Restore trashed file
+     * 
+     * @param \App\Models\User $user
+     * @param \App\Models\file $file
+     * @return void
+     */
+    public function restoreFromTrash(User $user, File $file): void
+    {
+        $fileCacheLock = $this->fileCacheService->getUpdateLock($file);
+
+        try {
+            if (!$fileCacheLock->get()) {
+                throw new Exception('File is being updated by another process. Please try again later.', 423);
+            }
+
+            DB::transaction(function () use ($file, $user) {
+                $file = File::withTrashed()->where('uuid', $file->uuid)->lockForUpdate()->first();
+
+                 // File already deleted permanently
+                if (!$file) {
+                    throw new Exception('File not found.', 404);
+                }
+                
+                // File already restored
+                if (!$file->trashed()) {
+                    return;
+                }
+
+                $user = User::where('id', $user->id)->lockForUpdate()->first();
+
+                // @todo - not tested
+                // If file deleted_at older than user's last_delete_all_at, it means the file permanently deleted by user's delete all action, so we should return not found
+                $fileDeletedTimestamp = Carbon::parse($file->deleted_at);
+
+                if (isset($user->last_delete_all_at) && Carbon::parse($user->last_delete_all_at)->diffInMicroseconds($fileDeletedTimestamp) > 0) {
+                    throw new Exception('File not found.', 404);
+                }
+                
+                $file->restore();
+
+                $user->activities()->create(['action' => 'restore', 'file_id' => $file->id]);
+            });
+        } catch (Exception $e) {
+            report($e);
+
+            throw $e;
+        } finally {
+            $fileCacheLock?->release();
         }
     }
 }
