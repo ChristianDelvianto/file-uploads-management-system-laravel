@@ -15,10 +15,10 @@ Route::prefix('user')
 
     Route::prefix('trash')
     ->group(function () {
-        Route::delete('/', [UserDashboardController::class, 'deleteTrashed'])
-        ->name('trashed.delete');
+        Route::delete('/', [UserDashboardController::class, 'clearTrash'])
+        ->name('trash.delete');
 
-        Route::get('/', [UserDashboardController::class, 'trashed'])
-        ->name('trashed');
+        Route::get('/', [UserDashboardController::class, 'trash'])
+        ->name('trash');
     });
 });
