@@ -6,13 +6,6 @@ use App\Http\Controllers\v1\FileContentController;
 use App\Http\Controllers\v1\FileLinkController;
 use Illuminate\Support\Facades\Route;
 
-Route::apiResource('files', FileController::class)
-->only(['show']);
-
-Route::apiResource('files.activities', FileActivityController::class)
-->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
-->only(['index', 'store']);
-
 Route::prefix('files/{file}')
 ->as('files.')
 ->group(function () {
@@ -31,7 +24,6 @@ Route::prefix('files/{file}')
         Route::patch('trash', [FileController::class, 'markAsTrash'])
         ->name('trash');
 
-        // Update file's name and visibility
         Route::prefix('update')
         ->as('update.')
         ->group(function () {
@@ -72,3 +64,7 @@ Route::prefix('files/{file}')
         ->name('stream');
     });
 });
+
+Route::apiResource('files.activities', FileActivityController::class)
+->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
+->only(['index', 'store']);
