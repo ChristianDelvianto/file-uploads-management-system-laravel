@@ -16,6 +16,9 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->enum('status', ['canceled', 'completed', 'failed', 'started'])->default('started');
             $table->string('disk', 20); // s3, r2, supabase, gdrive, etc
+
+            // Metadata
+            $table->string('category', 20);
             $table->string('extension', 40);
             $table->string('mime_type', 100);
             $table->string('name'); // Original file name
