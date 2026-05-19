@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 class FileCacheService
 {
     /**
-     * [Description here]
+     * Get file's update lock.
      * 
      * @param \App\Models\File $file
      * @return \Illuminate\Contracts\Cache\Lock
@@ -24,7 +24,8 @@ class FileCacheService
     }
 
     /**
-     * [Description here]
+     * Wait for the lock to be released and acquire it.
+     * If the lock cannot be acquired within the timeout duration, it will throw an exception.
      * 
      * @param \Illuminate\Contracts\Cache\Lock $lock
      * @param ?int $timeoutDuration
