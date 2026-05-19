@@ -3,13 +3,11 @@
 use App\Http\Controllers\v1\FileController;
 use App\Http\Controllers\v1\FileActivityController;
 use App\Http\Controllers\v1\FileContentController;
-use App\Http\Controllers\v1\FileContentTrashedController;
 use App\Http\Controllers\v1\FileLinkController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('files', FileController::class)
-->middlewareFor(['restore'], ['auth:sanctum', 'role:user'])
-->only(['restore', 'show']);
+->only(['show']);
 
 Route::apiResource('files.activities', FileActivityController::class)
 ->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
@@ -48,40 +46,29 @@ Route::prefix('files/{file}')
     // Serve file content and thumbnail
     Route::prefix('content')
     ->as('content.')
-    ->middleware(['signed'])
+    ->middleware(['signed', 'verify_nonce'])
     ->group(function () {
-        Route::get('download/{storageName}', [FileContentController::class, 'downloadContent'])
-        ->name('download');
-
-        Route::get('main/{storageName}', [FileContentController::class, 'showContent'])
+        Route::get('/', [FileContentController::class, 'showContent'])
         ->name('main');
 
-        Route::get('thumbnail/{thumbnailName}', [FileContentController::class, 'showThumbnail'])
+        Route::get('download', [FileContentController::class, 'downloadContent'])
+        ->name('download');
+
+        Route::get('thumbnail', [FileContentController::class, 'showThumbnail'])
         ->name('thumbnail');
-
-        // Only for file owner
-        Route::prefix('trash')
-        ->as('trash.')
-        ->group(function () {
-            Route::get('main/{storageName}', [FileContentTrashedController::class, 'showTrashedContent'])
-            ->name('main');
-
-            Route::get('thumbnail/{thumbnailName}', [FileContentTrashedController::class, 'showTrashedThumbnail'])
-            ->name('thumbnail');
-        });
     });
 
     Route::prefix('link')
     ->as('link.')
     ->group(function () {
-        Route::get('content', [FileLinkController::class, 'content'])
-        ->name('content');
-
         Route::get('download', [FileLinkController::class, 'download'])
         ->name('download');
 
-        Route::put('share', [FileLinkController::class, 'share'])
+        Route::get('share', [FileLinkController::class, 'share'])
         ->middleware(['auth:sanctum', 'role:user'])
         ->name('share');
+
+        Route::get('stream', [FileLinkController::class, 'content'])
+        ->name('stream');
     });
 });
