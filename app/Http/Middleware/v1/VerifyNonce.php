@@ -33,8 +33,8 @@ class VerifyNonce
         $nonceData = $this->fileNonceService->getNonceData($nonce);
         abort_if(!$nonceData, 403, 'Nonce no longer exists.');
 
-        $isValid = $this->fileNonceService->verifyNonce($file, $ipAddress, $userAgent, $nonceData);
-        abort_if(!$isValid, 403, 'Nonce verification failed.');
+        $isNonceValid = $this->fileNonceService->verifyNonce($file, $ipAddress, $userAgent, $nonceData);
+        abort_if(!$isNonceValid, 403, 'Nonce verification failed.');
 
         if ($nonceData['one_time_access']) {
             $this->fileNonceService->removeNonce($nonce);

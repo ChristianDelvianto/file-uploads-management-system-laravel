@@ -31,6 +31,8 @@ class FileNonceService
             'one_time_access' => !in_array($file->category, ['audio', 'video']),
             'should_refresh' => in_array($file->category, ['audio', 'video']),
             'user_agent' => $userAgent
+
+            // Additional data can be added here in the future.
         ];
 
         Cache::put($cacheKey, $nonceData, now()->addSeconds($duration));
@@ -89,12 +91,12 @@ class FileNonceService
      * @param array $nonceData
      * @return bool
      */
-    public function verifyNonce(
-        File $file,
-        string $ipAddress,
-        string $userAgent,
-        array $nonceData
-    ): bool {
+    public function verifyNonce(File $file, string $ipAddress, string $userAgent, array $nonceData): bool
+    {
+        if ($nonceData['file_id'] !== $file->id) {
+            return false;
+        }
+
         if ($nonceData['ip_address'] !== $ipAddress) {
             return false;
         }
@@ -103,9 +105,7 @@ class FileNonceService
             return false;
         }
 
-        if ($nonceData['file_id'] !== $file->id) {
-            return false;
-        }
+        // Other checks here can be added in the future.
 
         return true;
     }
