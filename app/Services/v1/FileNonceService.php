@@ -21,40 +21,30 @@ class FileNonceService
     {
         $duration = config('filesystems.file_nonce_duration');
 
-        $nonceValue = Str::random(32);
-        $encryptedNonce = encrypt($nonceValue);
-        $hashedNonce = hash('sha256', $nonceValue);
+        $nonce = Str::random(32);
+        $encryptedNonce = encrypt($nonce);
+        $cacheKey = "file_access_nonce:{$nonce}";
 
-        $data = [
+        $nonceData = [
             'file_id' => $file->id,
             'ip_address' => $ipAddress,
-            'nonce' => $nonceValue,
-            'should_refresh' => in_array($file->category, ['audio', 'video']),
             'one_time_access' => !in_array($file->category, ['audio', 'video']),
+            'should_refresh' => in_array($file->category, ['audio', 'video']),
             'user_agent' => $userAgent
         ];
 
-        $cacheKey = "file_access_nonce:{$hashedNonce}";
-
-        Cache::put($cacheKey, $data, now()->addSeconds($duration));
+        Cache::put($cacheKey, $nonceData, now()->addSeconds($duration));
 
         return $encryptedNonce;
     }
 
     /**
-     * Get nonce data.
-     * 
      * @param string $encryptedNonce
-     * @return array|null
      */
-    public function getNonceData(string $encryptedNonce): array|null
+    public function decryptNonce(string $encryptedNonce): string|null
     {
         try {
-            $hashedNonce = decrypt($encryptedNonce);
-
-            $cacheKey = "file_access_nonce:{$hashedNonce}";
-
-            return Cache::get($cacheKey, null);
+            return decrypt($encryptedNonce);
         } catch (DecryptException $e) {
             report($e);
 
@@ -63,82 +53,72 @@ class FileNonceService
     }
 
     /**
-     * Restore the data using same hashed nonce.
+     * Get nonce data.
      * 
-     * @param string $encryptedNonce
-     * @param array $data
-     * @return void
+     * @param string $nonce
+     * @return array|null
      */
-    public function refreshNonce(string $encryptedNonce, array $data): void
+    public function getNonceData(string $nonce): array|null
     {
-        $duration = config('filesystems.file_nonce_duration');
+        $cacheKey = "file_access_nonce:{$nonce}";
 
-        try {
-            $hashedNonce = decrypt($encryptedNonce);
-
-            $cacheKey = "file_access_nonce:{$hashedNonce}";
-
-            Cache::put($cacheKey, $data, now()->addSeconds($duration));
-        } catch (DecryptException $e) {
-            report($e);
-
-            throw $e;
-        }
+        return Cache::get($cacheKey, null);
     }
 
     /**
-     * Verify the nonce against the provided data.
+     * Refresh nonce duration.
+     * 
+     * @param array $nonceData
+     * @return void
+     */
+    public function refreshNonce(string $nonce, array $nonceData): void
+    {
+        $duration = config('filesystems.file_nonce_duration');
+
+        $cacheKey = "file_access_nonce:{$nonce}";
+
+        Cache::put($cacheKey, $nonceData, now()->addSeconds($duration));
+    }
+
+    /**
+     * Verify the nonce data against the provided data.
      * 
      * @param \App\Models\File $file
-     * @param string $encryptedNonce
      * @param string $ipAddress
      * @param string $userAgent
-     * @param array $data
+     * @param array $nonceData
      * @return bool
      */
     public function verifyNonce(
         File $file,
-        string $encryptedNonce,
         string $ipAddress,
         string $userAgent,
-        array $data
+        array $nonceData
     ): bool {
-        try {
-            $hashedNonce = decrypt($encryptedNonce);
-
-            if (hash('sha256', $data['nonce']) !== $hashedNonce) {
-                return false;
-            }
-
-            if ($data['ip_address'] !== $ipAddress) {
-                return false;
-            }
-
-            if ($data['user_agent'] !== $userAgent) {
-                return false;
-            }
-
-            if ($data['file_id'] !== $file->id) {
-                return false;
-            }
-
-            return true;
-        } catch (DecryptException $e) {
-            report($e);
-
+        if ($nonceData['ip_address'] !== $ipAddress) {
             return false;
         }
+
+        if ($nonceData['user_agent'] !== $userAgent) {
+            return false;
+        }
+
+        if ($nonceData['file_id'] !== $file->id) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
      * Remove nonce from cache to prevent multiple access.
      * 
-     * @param string $hashedNonce
+     * @param string $nonce
      * @return void
      */
-    public function removeNonce(string $hashedNonce): void
+    public function removeNonce(string $nonce): void
     {
-        $cacheKey = "file_access_nonce:{$hashedNonce}";
+        $cacheKey = "file_access_nonce:{$nonce}";
 
         Cache::forget($cacheKey);
     }

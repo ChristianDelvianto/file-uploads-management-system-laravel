@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 class VerifyNonce
 {
     public function __construct(
-        public FileNonceService $fileNonceService
+        private FileNonceService $fileNonceService
     ) {
         // 
     }
@@ -22,20 +22,22 @@ class VerifyNonce
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $file = $request->route('file');
         $encryptedNonce = $request->query('nonce');
+        $ipAddress = $request->ip();
+        $userAgent = $request->userAgent();
 
-        $data = $this->fileNonceService->getNonceData($encryptedNonce);
+        $nonce = $this->fileNonceService->decryptNonce($encryptedNonce);
+        abort_if(!$nonce, 403, 'Invalid nonce provided.');
 
-        if (is_null($data)) {
-            abort(403, 'Nonce has no data.');
-        } else if (!$this->fileNonceService->verifyNonce($request->route('file'), $encryptedNonce, $request->userAgent(), $request->ip(), $data)) {
-            abort(403, 'Invalid nonce.');
-        }
+        $nonceData = $this->fileNonceService->getNonceData($nonce);
+        abort_if(!$nonceData, 403, 'Nonce no longer exists.');
 
-        if ($data['one_time_access']) {
-            $this->fileNonceService->removeNonce(hash('sha256', $data['nonce']));
-        } else if ($data['should_refresh']) {
-            $this->fileNonceService->refreshNonce($encryptedNonce, $data);
+        $isValid = $this->fileNonceService->verifyNonce($file, $ipAddress, $userAgent, $nonceData);
+        abort_if(!$isValid, 403, 'Nonce verification failed.');
+
+        if ($nonceData['one_time_access']) {
+            $this->fileNonceService->removeNonce($nonce);
         }
 
         return $next($request);
