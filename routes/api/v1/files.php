@@ -38,15 +38,22 @@ Route::prefix('files/{file}')
     // Serve file content and thumbnail
     Route::prefix('content')
     ->as('content.')
-    ->middleware(['signed', 'verify_nonce'])
     ->group(function () {
         Route::get('/', [FileContentController::class, 'showContent'])
+        ->middleware(['signed', 'verify_nonce'])
         ->name('main');
 
         Route::get('download', [FileContentController::class, 'downloadContent'])
+        ->middleware(['signed', 'verify_nonce'])
         ->name('download');
 
+        // Only for audio/video files
+        Route::get('stream', [FileContentController::class, 'streamContent'])
+        ->middleware(['verify_stream'])
+        ->name('stream');
+
         Route::get('thumbnail', [FileContentController::class, 'showThumbnail'])
+        ->middleware(['signed', 'verify_nonce'])
         ->name('thumbnail');
     });
 
