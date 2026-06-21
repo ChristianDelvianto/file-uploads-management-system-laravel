@@ -19,10 +19,10 @@ class UserSeeder extends Seeder
         User::factory()->create(['role' => 'admin', 'name' => 'Admin', 'email' => 'admin@example.com']);
 
         // Get Free Plan
-        $freePlan = Plan::firstWhere('price_cents', 0);
+        $freePlan = Plan::firstWhere('price', 0);
 
         if (!$freePlan) {
-            $freePlan = Plan::factory()->create(['name' => 'Free', 'price_cents' => 0, 'limit_bytes' => 5368709120]); // 5 GB
+            $freePlan = Plan::factory()->create(['name' => 'Free', 'price' => 0, 'limit_bytes' => 5368709120]); // 5 GB
         }
 
         // Test User
