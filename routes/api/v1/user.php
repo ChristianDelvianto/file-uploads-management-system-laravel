@@ -7,11 +7,11 @@ Route::prefix('user')
 ->as('user.')
 ->middleware(['auth:sanctum', 'role:user'])
 ->group(function () {
-    Route::get('activities', [UserDashboardController::class, 'activities'])
-    ->name('activities');
-
     Route::get('files', [UserDashboardController::class, 'files'])
     ->name('files');
+
+    Route::get('shared', [UserDashboardController::class, 'sharedToUser'])
+    ->name('shared');
 
     Route::prefix('trash')
     ->group(function () {
