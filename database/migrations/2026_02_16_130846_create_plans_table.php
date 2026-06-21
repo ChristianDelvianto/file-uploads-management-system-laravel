@@ -13,15 +13,14 @@ return new class extends Migration
     {
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 30)->unique();
-            $table->boolean('is_active')->default(true);
-            $table->unsignedBigInteger('price_cents');
+            $table->string('name', 30);
+            $table->decimal('price', 10, 2);
             $table->unsignedBigInteger('limit_bytes');
             $table->timestamps();
 
-            // Indexes
-            $table->index('price_cents');
-            $table->index(['is_active', 'created_at']);
+            // Indexes (The indexes and composite indexes focuses on user-facing features only)
+            $table->unique('name');
+            $table->index('price');
         });
     }
 
