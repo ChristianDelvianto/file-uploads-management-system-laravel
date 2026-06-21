@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('file_shared', function (Blueprint $table) {
+            // $table->enum('permission', ['edit', 'view'])->default('view');
+            $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignId('file_id')->constrained('files', 'id')->cascadeOnDelete();
+            $table->timestamp('created_at')->useCurrent();
+
+            // Indexes
+            $table->primary(['user_id', 'file_id']);
+            $table->index('created_at');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('file_shared');
+    }
+};
