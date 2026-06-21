@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,6 +19,6 @@ class RoleCheckMiddleware
             return $next($request);
         }
 
-        throw new AuthorizationException('Unauthorized.');
+        abort(403, 'Unauthorized.');
     }
 }
