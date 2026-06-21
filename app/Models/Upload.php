@@ -20,6 +20,9 @@ class Upload extends Model
         'uuid',
         'status',
         'disk',
+        'directory_path',
+        'sha256',
+        'category',
         'extension',
         'mime_type',
         'name',
@@ -39,6 +42,8 @@ class Upload extends Model
     protected $hidden = [
         'id',
         'disk',
+        'directory_path',
+        'sha256',
         'user_id'
     ];
 
@@ -63,7 +68,7 @@ class Upload extends Model
     }
 
     /**
-     * Define route key name for route model binding
+     * Define route key name for route model binding.
      */
     public function getRouteKeyName(): string
     {
