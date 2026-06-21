@@ -9,7 +9,7 @@ use Illuminate\Validation\Rules\RequiredIf;
 class UploadStoreRequest extends FormRequest
 {
     public function __construct(
-        public AuthService $authService
+        protected AuthService $authService
     ) {
         // 
     }
@@ -32,29 +32,43 @@ class UploadStoreRequest extends FormRequest
         $maxChunkSizePerRequest = config('filesystems.max_chunk_size_per_request');
 
         $user = $this->user('sanctum');
-
         $maxChunkCount = ceil($this->input('bytes_size') / $maxChunkSizePerRequest);
-
         $userPlan = $this->authService->getUserPlan($user);
 
         // $remainingSpace = $userPlan->plan->limit_bytes - $user->used_bytes;
 
         return [
-            'extension' => ['required', 'string', 'max:40'],
-            'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'in:,audio,document,image,other,video'],
-            'mime_type' => ['required', 'string', 'max:100'],
+            'extension' => [
+                'required',
+                'string',
+                'max:40'
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+            'category' => [
+                'required',
+                'string',
+                'in:,audio,document,image,other,video'
+            ],
+            'mime_type' => [
+                'required',
+                'string',
+                'max:100'
+            ],
             'chunk_count' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:' . $maxChunkCount
+                "max:{$maxChunkCount}",
+                'min:1'
             ],
             'bytes_size' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:' . $userPlan->plan->limit_bytes
+                "max:{$userPlan->plan->limit_bytes}",
+                'min:1'
             ],
             'duration' => [
                 'nullable', 
@@ -67,7 +81,7 @@ class UploadStoreRequest extends FormRequest
             'thumbnail' => [
                 'nullable',
                 'image',
-                'max:2048', // 2 MB
+                'max:5120', // 5 MB
                 new RequiredIf(function () {
                     return $this->isVideo();
                 })

@@ -11,7 +11,7 @@ class FileUpdateVisibilityRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->id === $this->route('file')->user_id;
     }
 
     /**
@@ -24,9 +24,28 @@ class FileUpdateVisibilityRequest extends FormRequest
         $user = $this->user('sanctum');
 
         return [
-            'visibility' => ['required', 'string', 'in:private,public,shared'],
-            'emails' => ['required_if:visibility,=,shared', 'array', 'min:1', 'max:10'],
-            'emails.*' => ['email', 'exists:users,email', 'not_in:' . $user->email]
+            'visibility' => [
+                'required',
+                'string',
+                'in:private,public,shared'
+            ],
+            'emails' => [
+                'required_if:visibility,=,shared',
+                'array',
+                'max:10',
+                'min:1'
+            ],
+            'emails.*' => [
+                'string',
+                'email',
+                "not_in:{$user->email}"
+            ]
+            // 'emails.*' => [
+            //     'string',
+            //     'email',
+            //     'exists:users,email',
+            //     "not_in:{$user->email}"
+            // ]
         ];
     }
 }
