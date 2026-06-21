@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class File extends Model
@@ -22,9 +24,10 @@ class File extends Model
     protected $fillable = [
         'uuid',
         'status',
-        'visibility',
-        'is_scanned',
         'disk',
+        'directory_path',
+        'visibility',
+        'scan_status',
         'category',
         'extension',
         'mime_type',
@@ -44,6 +47,7 @@ class File extends Model
     protected $hidden = [
         'id',
         'disk',
+        'directory_path',
         'user_id'
     ];
 
@@ -55,7 +59,7 @@ class File extends Model
     protected $attributes = [
         'status' => 'completed',
         'visibility' => 'private',
-        'is_scanned' => false
+        'scan_status' => 'pending'
     ];
 
     /**
@@ -65,14 +69,21 @@ class File extends Model
      */
     protected function casts(): array
     {
-        return [
-            'is_scanned' => 'boolean',
-            'last_action_at' => 'datetime'
-        ];
+        return [];
     }
 
     /**
-     * Define route key name for route model binding
+     * Get file full name with extension.
+     */
+    protected function fullName(): Attribute
+    {
+        return Attribute::get(function () {
+            return "{$this->name}.{$this->extension}";
+        });
+    }
+
+    /**
+     * Define route key name for route model binding.
      */
     public function getRouteKeyName(): string
     {
@@ -80,7 +91,7 @@ class File extends Model
     }
 
     /**
-     * File has many activities
+     * File has many activities.
      */
     public function activities(): HasMany
     {
@@ -88,15 +99,23 @@ class File extends Model
     }
 
     /**
-     * Get the users that the file is shared with
+     * File public link
      */
-    public function shares(): BelongsToMany
+    public function publicLink(): HasOne
     {
-        return $this->belongsToMany(\App\Models\User::class, 'file_shares', 'file_id', 'user_id', 'id', 'id');
+        return $this->hasOne(\App\Models\FilePublicLink::class, 'file_id', 'id');
     }
 
     /**
-     * File belongs to User
+     * Get the users that the file is shared with.
+     */
+    public function shared(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'file_shared', 'file_id', 'user_id', 'id', 'id');
+    }
+
+    /**
+     * The user that has the file.
      */
     public function user(): BelongsTo
     {
