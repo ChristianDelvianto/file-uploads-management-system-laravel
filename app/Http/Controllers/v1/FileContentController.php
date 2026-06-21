@@ -4,7 +4,7 @@ namespace App\Http\Controllers\v1;
 
 use App\Http\Controllers\Controller;
 use App\Models\File;
-use App\Services\v1\FileStorageService;
+use App\Services\v1\StorageService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class FileContentController extends Controller
 {
     public function __construct(
-        private FileStorageService $fileStorageService
+        protected StorageService $storageService
     ) {
         // 
     }
@@ -21,23 +21,22 @@ class FileContentController extends Controller
      * Serve file content for download.
      * 
      * @param \App\Models\File $file
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
-    public function downloadContent(File $file): BinaryFileResponse|StreamedResponse
+    public function download(File $file): StreamedResponse
     {
         return response()->streamDownload(function () use ($file) {
-            // 1. Force the output to the browser immediately (Memory Protection)
+            $filePath = "{$file->directory_path}/{$file->storage_name}";
+
+            // Force the output to the browser immediately (Memory Protection)
             while (ob_get_level() > 0) {
                 ob_end_flush();
             }
 
-            // 2. Open a stream from the private cloud
-            $stream = Storage::disk($file->disk)->readStream("files/{$file->uuid}/{$file->storage_name}");
+            $stream = Storage::disk($file->disk)->readStream($filePath);
 
-            // 3. Pipe the cloud data directly to the user
             fpassthru($stream);
 
-            // 4. Securely close the connection
             if (is_resource($stream)) {
                 fclose($stream);
             }
@@ -48,24 +47,14 @@ class FileContentController extends Controller
      * Serve file content for web access.
      * 
      * @param \App\Models\File $file
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
-    public function showContent(File $file): BinaryFileResponse|StreamedResponse
+    public function show(File $file): StreamedResponse
     {
-        // Only for audio or video
-        if (in_array($file->category, ['audio', 'video'])) {
-            $filePath = $this->fileStorageService->getContentPath($file);
-
-            return response()->file($filePath, [
-                'Accept-Ranges' => 'bytes',
-                'Cache-Control' => 'no-store, no-cache, private, must-revalidate',
-                'Content-Type' => $file->mime_type,
-                'Content-Disposition' => "inline; filename=\"{$file->full_name}\"",
-            ]);
-        }
-
         return response()->stream(function () use ($file) {
-            $stream = Storage::disk($file->disk)->readStream("files/{$file->uuid}/$file->storage_name");
+            $filePath = "{$file->directory_path}/{$file->storage_name}";
+
+            $stream = Storage::disk($file->disk)->readStream($filePath);
 
             // "Pipe" the source directly to the PHP output buffer
             fpassthru($stream);
@@ -85,32 +74,40 @@ class FileContentController extends Controller
     }
 
     /**
-     * Serve file's thumbnail for web access (This method does not use Route Model Binding).
+     * Serve file's thumbnail for web access.
      * When file is trashed, the file owner can still see the file thumbnail in the trashed page.
      * 
-     * @param string $uuid
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     * @param \App\Models\File $file
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    public function showThumbnail(string $uuid): StreamedResponse
+    public function showThumbnail(File $file): BinaryFileResponse
     {
-        $file = File::withTrashed()->where('uuid', $uuid)->firstOrFail();
+        $thumbnailPath = Storage::disk($file->disk)->path("{$file->directory_path}/{$file->thumbnail_name}");
 
-        return response()->stream(function () use ($file) {
-            $stream = Storage::disk($file->disk)->readStream("files/{$file->uuid}/{$file->thumbnail_name}");
-
-            fpassthru($stream);
-
-            if (is_resource($stream)) {
-                fclose($stream);
-            }
-        },
-        200,
-        [
+        return response()->file($thumbnailPath, [
             'Cache-Control' => 'no-store, no-cache, private, must-revalidate',
             'Content-Type' => 'image/jpeg',
             'Content-Disposition' => "inline; filename=\"{$file->thumbnail_name}\"",
             'X-Accel-Buffering' => 'no', // For Nginx/FastCGI to prevent proxy buffering
             'X-Content-Type-Options' => 'nosniff'
+        ]);
+    }
+
+    /**
+     * Only for `audio` and `video`, stream file content for web access.
+     * 
+     * @param \App\Models\File $file
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function stream(File $file): BinaryFileResponse
+    {
+        $filePath = Storage::disk($file->disk)->path("{$file->directory_path}/{$file->storage_name}");
+
+        return response()->file($filePath, [
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'no-store, no-cache, private, must-revalidate',
+            'Content-Type' => $file->mime_type,
+            'Content-Disposition' => "inline; filename=\"{$file->full_name}\"",
         ]);
     }
 }
