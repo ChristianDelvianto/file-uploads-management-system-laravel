@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\v1\FileController;
-use App\Http\Controllers\v1\FileActivityController;
 use App\Http\Controllers\v1\FileContentController;
 use App\Http\Controllers\v1\FileLinkController;
 use App\Http\Controllers\v1\FileRestoreController;
@@ -11,7 +10,7 @@ use App\Http\Controllers\v1\FileUpdateVisibilityController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('file', FileController::class)
-->middlewareFor(['destroy'], ['auth:sanctum', 'role:user'])
+->middlewareFor(['destroy'], ['auth:sanctum'])
 ->only(['destroy', 'show']);
 
 Route::prefix('file/{file}/content')
@@ -19,21 +18,20 @@ Route::prefix('file/{file}/content')
 ->group(function () {
     Route::get('/', [FileContentController::class, 'show'])
     ->withoutMiddleware(['throttle:api'])
-    ->middleware(['verify_nonce'])
+    ->middleware(['verify_token'])
     ->withTrashed()
     ->name('show');
 
     Route::get('download', [FileContentController::class, 'download'])
-    ->middleware(['verify_nonce'])
+    ->middleware(['verify_token'])
     ->name('download');
 
     // Only for audio and video files
     Route::get('stream', [FileContentController::class, 'stream'])
-    ->middleware(['verify_nonce'])
+    ->middleware(['verify_token'])
     ->name('stream');
 
     Route::get('thumbnail', [FileContentController::class, 'showThumbnail'])
-    ->withoutMiddleware(['throttle:api'])
     ->withTrashed()
     ->name('thumbnail');
 });
@@ -45,7 +43,7 @@ Route::prefix('file/{file}/link')
     ->name('download');
 
     Route::get('share', [FileLinkController::class, 'share'])
-    ->middleware(['auth:sanctum', 'role:user'])
+    ->middleware(['auth:sanctum'])
     ->name('share');
 
     // Only for audio and video files
@@ -54,17 +52,18 @@ Route::prefix('file/{file}/link')
 });
 
 Route::patch('file/{file}/restore', FileRestoreController::class)
-->middleware(['auth:sanctum', 'role:user'])
+->middleware(['auth:sanctum'])
+->withTrashed()
 ->name('file.restore');
 
 Route::patch('file/{file}/trash', FileTrashController::class)
-->middleware(['auth:sanctum', 'role:user'])
+->middleware(['auth:sanctum'])
 ->withTrashed()
 ->name('file.trash');
 
 Route::prefix('file/{file}/update')
 ->as('file.update.')
-->middleware(['auth:sanctum', 'role:user'])
+->middleware(['auth:sanctum'])
 ->group(function () {
     Route::put('name', FileUpdateNameController::class)
     ->name('name');
@@ -72,8 +71,3 @@ Route::prefix('file/{file}/update')
     Route::put('visibility', FileUpdateVisibilityController::class)
     ->name('visibility');
 });
-
-Route::apiResource('file.activities', FileActivityController::class)
-->middlewareFor(['index'], ['auth:sanctum', 'role:user'])
-->withTrashed(['index'])
-->only(['index', 'store']);
