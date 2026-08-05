@@ -27,12 +27,12 @@ class UserDashboardController extends Controller
      */
     public function files(UserGetFilesRequest $request): JsonResponse
     {
-        $user = $request->user('sanctum');
-
-        $items = $this->userFileService->getFiles($user, $request->validated('category'), $request->validated('oldest'), $request->validated('timestamp'));
+        $pagination = $this->userFileService->getFiles($request->user('sanctum'), $request->validated('category'), $request->validated('oldest'), $request->validated('cursor'));
 
         return response()->json([
-            'items' => UserFileResource::collection($items)
+            'has_more' => $pagination->hasMorePages(),
+            'next_cursor' => optional($pagination->nextCursor())?->encode(),
+            'items' => UserFileResource::collection($pagination->items())
         ]);
     }
 
@@ -42,14 +42,14 @@ class UserDashboardController extends Controller
      * @param \App\Http\Requests\v1\UserGetSharedFilesRequest $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function sharedToUser(UserGetSharedFilesRequest $request): JsonResponse
+    public function sharedWithUser(UserGetSharedFilesRequest $request): JsonResponse
     {
-        $user = $request->user('sanctum');
-
-        $items = $this->userFileService->getSharedToUser($user, $request->validated('oldest'), $request->validated('timestamp'));
+        $pagination = $this->userFileService->getSharedWithUser($request->user('sanctum'), $request->validated('oldest'), $request->validated('cursor'));
 
         return response()->json([
-            'items' => UserFileResource::collection($items)
+            'has_more' => $pagination->hasMorePages(),
+            'next_cursor' => optional($pagination->nextCursor())?->encode(),
+            'items' => UserFileResource::collection($pagination->items())
         ]);
     }
 
@@ -61,11 +61,7 @@ class UserDashboardController extends Controller
      */
     public function clearTrash(Request $request): JsonResponse
     {
-        $user = $request->user('sanctum');
-        
-        $timestamp = now();
-
-        $usedBytes = $this->userFileService->deleteTrashed($user, $timestamp);
+        $usedBytes = $this->userFileService->deleteTrashed($request->user('sanctum'), now());
 
         return response()->json([
             'used_bytes' => $usedBytes
@@ -80,12 +76,12 @@ class UserDashboardController extends Controller
      */
     public function trash(UserGetTrashedFilesRequest $request): JsonResponse
     {
-        $user = $request->user('sanctum');
-
-        $items = $this->userFileService->getTrashedFiles($user, $request->validated('oldest'), $request->validated('timestamp'));
+        $pagination = $this->userFileService->getTrashedFiles($request->user('sanctum'), $request->validated('oldest'), $request->validated('cursor'));
 
         return response()->json([
-            'items' => UserFileResource::collection($items)
+            'has_more' => $pagination->hasMorePages(),
+            'next_cursor' => optional($pagination->nextCursor())?->encode(),
+            'items' => UserFileResource::collection($pagination->items())
         ]);
     }
 }
