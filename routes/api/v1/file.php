@@ -17,7 +17,6 @@ Route::prefix('file/{file}/content')
 ->as('file.content.')
 ->group(function () {
     Route::get('/', [FileContentController::class, 'show'])
-    ->withoutMiddleware(['throttle:api'])
     ->middleware(['verify_token'])
     ->withTrashed()
     ->name('show');
