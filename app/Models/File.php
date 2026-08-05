@@ -24,10 +24,9 @@ class File extends Model
     protected $fillable = [
         'uuid',
         'status',
+        'visibility',
         'disk',
         'directory_path',
-        'visibility',
-        'scan_status',
         'category',
         'extension',
         'mime_type',
@@ -58,8 +57,7 @@ class File extends Model
      */
     protected $attributes = [
         'status' => 'completed',
-        'visibility' => 'private',
-        'scan_status' => 'pending'
+        'visibility' => 'private'
     ];
 
     /**
@@ -78,7 +76,10 @@ class File extends Model
     protected function fullName(): Attribute
     {
         return Attribute::get(function () {
-            return "{$this->name}.{$this->extension}";
+            $string = $this->name . $this->extension;
+
+            // Escape full file name
+            return htmlspecialchars($string, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         });
     }
 
@@ -91,19 +92,19 @@ class File extends Model
     }
 
     /**
-     * File has many activities.
-     */
-    public function activities(): HasMany
-    {
-        return $this->hasMany(\App\Models\FileActivity::class, 'file_id', 'id');
-    }
-
-    /**
-     * File public link
+     * File public link.
      */
     public function publicLink(): HasOne
     {
         return $this->hasOne(\App\Models\FilePublicLink::class, 'file_id', 'id');
+    }
+
+    /**
+     * File scan status.
+     */
+    public function scan(): HasOne
+    {
+        return $this->hasOne(\App\Models\FileScan::class, 'file_id', 'id');
     }
 
     /**
