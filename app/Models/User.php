@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -21,12 +22,10 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'role',
-        'used_bytes',
+        'photo',
         'name',
         'email',
-        'password',
-        'last_delete_all_at'
+        'password'
     ];
 
     /**
@@ -35,8 +34,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'role',
-        'password',
+        'password'
         // 'remember_token'
     ];
 
@@ -45,11 +43,7 @@ class User extends Authenticatable
      *
      * @return array<string, any>
      */
-    protected $attributes = [
-        'role' => 'user',
-        'used_bytes' => 0,
-        'last_delete_all_at' => null
-    ];
+    protected $attributes = [];
 
     /**
      * Get the attributes that should be cast.
@@ -65,15 +59,7 @@ class User extends Authenticatable
     }
 
     /**
-     * User has many activities
-     */
-    public function activities(): HasMany
-    {
-        return $this->hasMany(\App\Models\UserActivity::class, 'user_id', 'id');
-    }
-
-    /**
-     * User has many File
+     * User has many File.
      */
     public function files(): HasMany
     {
@@ -81,10 +67,34 @@ class User extends Authenticatable
     }
 
     /**
-     * User has one Plan
+     * User has one Plan.
      */
     public function plan(): HasOne
     {
         return $this->hasOne(\App\Models\PlanUser::class, 'user_id', 'id');
+    }
+
+    /**
+     * User has one Quota.
+     */
+    public function quota(): HasOne
+    {
+        return $this->hasOne(\App\Models\UserQuota::class, 'user_id', 'id');
+    }
+
+    /**
+     * User belongs to many File.
+     */
+    public function shared(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\File::class, 'file_shared', 'user_id', 'file_id', 'id', 'id');
+    }
+
+    /**
+     * User has many Upload.
+     */
+    public function uploads(): HasMany
+    {
+        return $this->hasMany(\App\Models\Upload::class, 'user_id', 'id');
     }
 }
