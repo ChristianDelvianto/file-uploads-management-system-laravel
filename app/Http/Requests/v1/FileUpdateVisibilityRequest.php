@@ -3,6 +3,8 @@
 namespace App\Http\Requests\v1;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\RequiredIf;
 
 class FileUpdateVisibilityRequest extends FormRequest
 {
@@ -30,22 +32,19 @@ class FileUpdateVisibilityRequest extends FormRequest
                 'in:private,public,shared'
             ],
             'emails' => [
-                'required_if:visibility,=,shared',
+                'bail',
+                'nullable',
                 'array',
                 'max:10',
-                'min:1'
+                Rule::when($this->input('visibility') === 'shared', ['min:1']),
+                new RequiredIf(fn () => $this->input('visibility') === 'shared')
             ],
             'emails.*' => [
                 'string',
                 'email',
-                "not_in:{$user->email}"
+                "not_in:{$user->email}",
+                'exists:users,email'
             ]
-            // 'emails.*' => [
-            //     'string',
-            //     'email',
-            //     'exists:users,email',
-            //     "not_in:{$user->email}"
-            // ]
         ];
     }
 }
