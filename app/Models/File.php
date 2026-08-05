@@ -116,6 +116,14 @@ class File extends Model
     }
 
     /**
+     * Get the share links associated with the file.
+     */
+    public function shareLinks(): HasMany
+    {
+        return $this->hasMany(\App\Models\FileShareLink::class, 'file_id', 'id');
+    }
+
+    /**
      * The user that has the file.
      */
     public function user(): BelongsTo
