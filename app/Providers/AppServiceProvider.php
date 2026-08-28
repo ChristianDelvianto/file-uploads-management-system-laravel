@@ -23,11 +23,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perHour(100)->by($request->user()?->id ?: $request->ip());
+            $prefix = $request->user()?->id ?: $request->ip();
+
+            $key = md5($prefix . ':' . $request->url());
+
+            return Limit::perHour(1000)->by($key);
         });
 
-        RateLimiter::for('upload', function (Request $request) {
-            return Limit::perHour(1000)->by($request->user()->id);
+        RateLimiter::for('upload_chunks', function (Request $request) {
+            $key = md5($request->user()->id . ':' . $request->route('upload')->uuid);
+
+            return Limit::perHour(9999)->by($key);
         });
     }
 }
