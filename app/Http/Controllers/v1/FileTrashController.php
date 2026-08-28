@@ -27,9 +27,9 @@ class FileTrashController extends Controller
      */
     public function __invoke(Request $request, File $file): JsonResponse
     {
-        $user = $request->user('sanctum');
-
-        Gate::forUser($user)->policy(File::class, FilePolicy::class)->authorize('setAsTrash', $file);
+        Gate::forUser($request->user())
+            ->policy(File::class, FilePolicy::class)
+            ->authorize('setAsTrash', $file);
 
         if (!$file->trashed()) {
             $this->fileService->putToTrash($file);

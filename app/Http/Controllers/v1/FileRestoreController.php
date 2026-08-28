@@ -27,12 +27,12 @@ class FileRestoreController extends Controller
      */
     public function __invoke(Request $request, File $file): JsonResponse
     {
-        $user = $request->user('sanctum');
-
-        Gate::forUser($user)->policy(File::class, FilePolicy::class)->authorize('restore', $file);
+        Gate::forUser($request->user())
+            ->policy(File::class, FilePolicy::class)
+            ->authorize('restore', $file);
 
         if ($file->trashed()) {
-            $this->fileService->restoreTrash($user, $file);
+            $this->fileService->restoreTrash($request->user(), $file);
         }
 
         return response()->json(null, 204);
