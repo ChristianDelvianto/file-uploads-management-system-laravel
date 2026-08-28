@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\RequiredIf;
 
-class FileUpdateVisibilityRequest extends FormRequest
+class FileVisibilityRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,7 +23,7 @@ class FileUpdateVisibilityRequest extends FormRequest
      */
     public function rules(): array
     {
-        $user = $this->user('sanctum');
+        $user = $this->user();
 
         return [
             'visibility' => [
@@ -37,7 +37,7 @@ class FileUpdateVisibilityRequest extends FormRequest
                 'array',
                 'max:10',
                 Rule::when($this->input('visibility') === 'shared', ['min:1']),
-                new RequiredIf(fn () => $this->input('visibility') === 'shared')
+                Rule::requiredIf(fn () => $this->input('visibility') === 'shared')
             ],
             'emails.*' => [
                 'string',
