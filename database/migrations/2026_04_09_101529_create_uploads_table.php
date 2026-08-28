@@ -13,25 +13,28 @@ return new class extends Migration
     {
         Schema::create('uploads', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid')->unique();
+            $table->uuid('uuid');
             $table->enum('status', ['canceled', 'completed', 'failed', 'started'])->default('started');
-            $table->string('disk', 20); // s3, r2, supabase, gdrive, etc
+            $table->string('disk', 100)->nullable(); // 'azure', 'gdrive', 'local', 'r2', 'supabase', 's3', etc
+            $table->string('directory_path')->nullable();
 
             // Metadata
-            $table->string('category', 20);
+            $table->enum('category', ['audio', 'document', 'image', 'other', 'video']);
             $table->string('extension', 40);
             $table->string('mime_type', 100);
             $table->string('name'); // Original file name
-            $table->unsignedMediumInteger('duration')->nullable(); // Audio & video
+            $table->unsignedInteger('duration')->nullable(); // Audio & video
             $table->unsignedBigInteger('bytes_size');
+
             $table->string('thumbnail_name')->nullable();
-            $table->unsignedSmallInteger('last_chunk_index')->nullable();
-            $table->unsignedSmallInteger('chunk_count');
+            $table->unsignedInteger('last_chunk_index')->nullable();
+            $table->unsignedInteger('chunk_count');
             $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
             $table->timestamps();
 
             // Indexes
-            $table->index(['status', 'created_at']);
+            $table->unique('uuid');
+            $table->index('created_at'); // For clean up cronjob
         });
     }
 
