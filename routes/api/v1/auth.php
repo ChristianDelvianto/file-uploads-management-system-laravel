@@ -1,26 +1,20 @@
 <?php
 
-use App\Http\Controllers\v1\AuthController;
+use App\Http\Controllers\v1\AuthAccountController;
+use App\Http\Controllers\v1\AuthLoginController;
+use App\Http\Controllers\v1\AuthLogoutController;
+use App\Http\Controllers\v1\AuthSignupController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')
 ->as('auth.')
 ->group(function () {
-    Route::get('info', [AuthController::class, 'userInfo'])
-    ->middleware(['auth:sanctum'])
-    ->name('info');
+    Route::post('login', AuthLoginController::class)->name('login');
+    Route::post('signup', AuthSignupController::class)->name('signup');
 
-    Route::post('new', [AuthController::class, 'newUser'])
-    ->name('new');
-
-    Route::prefix('tokens')
-    ->as('tokens.')
+    Route::middleware(['auth'])
     ->group(function () {
-        Route::delete('/', [AuthController::class, 'revokeCurrentToken'])
-        ->middleware(['auth:sanctum'])
-        ->name('delete');
-
-        Route::post('/', [AuthController::class, 'newToken'])
-        ->name('new');
+        Route::get('account', AuthAccountController::class)->name('account');
+        Route::post('logout', AuthLogoutController::class)->name('logout');
     });
 });
