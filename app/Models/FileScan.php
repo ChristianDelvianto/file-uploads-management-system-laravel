@@ -34,7 +34,9 @@ class FileScan extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'status'
+        'status',
+        'error_message',
+        'last_scan_at'
     ];
 
     /**

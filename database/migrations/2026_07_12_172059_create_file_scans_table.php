@@ -14,10 +14,15 @@ return new class extends Migration
         Schema::create('file_scans', function (Blueprint $table) {
             $table->foreignId('file_id');
             $table->enum('status', ['clean', 'infected', 'none', 'pending', 'processing'])->default('pending');
+
+            // For traceability and debugging purpose, we can store the error message if any
+            $table->text('error_message')->nullable();
+            $table->timestamp('last_scan_at')->nullable();
             $table->timestamps();
 
             // Indexes
             $table->primary('file_id');
+            $table->index(['status', 'last_scan_at']); // For internal usage only, (if we develop it)
         });
     }
 
