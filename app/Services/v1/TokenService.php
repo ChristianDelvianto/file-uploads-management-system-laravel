@@ -4,12 +4,41 @@ namespace App\Services\v1;
 
 use App\Models\File;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use Jenssegers\Agent\Agent;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 class TokenService
 {
+    /**
+     * Create a signed URL for access.
+     * 
+     * @param string $routeName
+     * @param array $routeParams
+     * @return string
+     */
+    public function generateAccessRoute(string $routeName, array $routeParams): string
+    {
+        $env = config('app.env', 'local');
+        $frontEndHost = config('app.front_end_host', 'http://localhost:5173');
+        $durationInMinutes = config('custom.file.access_signed_url_duration', 5);
+        $isURLAbsolute = $env !== 'local';
+
+        $accessRoute = URL::signedRoute(
+            $routeName,
+            $routeParams,
+            now()->addMinutes($durationInMinutes),
+            $isURLAbsolute
+        );
+
+        if (!$isURLAbsolute) { // Dev environment
+            return $frontEndHost . $accessRoute;
+        }
+
+        // Prod / Testing / Staging
+        return $accessRoute;
+    }
+
     /**
      * Create a short-lived stream token and store in cache.
      * 
@@ -20,22 +49,30 @@ class TokenService
      */
     public function generateToken(File $file, string $ipAddress, string $userAgent): string
     {
-        $duration = config('filesystems.file_token_duration', 300); // 5 min base window
-
-        $token = Str::random(64);
-        $cacheKey = "file_stream_token:{$token}";
+        $token = $this->createTokenId();
 
         $tokenData = [
             'file_id' => $file->id,
             'ip_address' => $ipAddress,
-            'user_agent' => $userAgent,
-            'is_streamable' => $this->isFileStreamable($file) // Allows continuous chunked reads
+            'ua_hash' => sha1($userAgent),
+            // 'expires_at' => now()->addDay()
         ];
 
-        Cache::put($cacheKey, $tokenData, $duration);
+        $this->storeToken("file_access_token:{$token}", $tokenData);
 
-        // Returning raw secure token is standard industry practice.
         return $token;
+    }
+
+    /**
+     * Generate token id.
+     * 
+     * @return string
+     */
+    public function createTokenId(): string
+    {
+        $tokenLength = config('custom.file.access_token_length', 64);
+
+        return Str::random($tokenLength);
     }
 
     /**
@@ -46,7 +83,9 @@ class TokenService
      */
     public function getTokenData(string $token): ?array
     {
-        return Cache::get("file_stream_token:{$token}");
+        $cacheKey = "file_access_token:{$token}";
+
+        return Cache::get($cacheKey, null);
     }
 
     /**
@@ -57,9 +96,15 @@ class TokenService
      */
     public function extendTokenLife(string $token, array $tokenData): void
     {
-        $duration = config('filesystems.file_token_duration', 300);
+        $durationInHours = config('custom.file.access_token_duration', 8); // In hours
 
-        Cache::put("file_stream_token:{$token}", $tokenData, $duration);
+        $cacheKey = "file_access_token:{$token}";
+
+        Cache::put(
+            $cacheKey,
+            $tokenData,
+            now()->addHours($durationInHours)
+        );
     }
 
     /**
@@ -68,9 +113,22 @@ class TokenService
      * @param \App\Models\File $file
      * @return bool
      */
-    public function isFileStreamable(File $file): bool
+    public function isStreamable(File $file): bool
     {
-        return in_array($file->category, ['audio', 'video']);
+        return in_array($file->category, ['audio', 'document', 'video']);
+    }
+
+    /**
+     * Store token data in cache.
+     * 
+     * @param string $key
+     * @param array $tokenData
+     */
+    public function storeToken(string $key, array $tokenData): void
+    {
+        $durationInHours = config('custom.file.file_access_token_duration', 8); // In hours
+
+        Cache::put($key, $tokenData, now()->addHours($durationInHours));
     }
 
     /**
@@ -91,7 +149,7 @@ class TokenService
             return false;
         }
 
-        return $this->verifyUserAgent($userAgent, $tokenData['user_agent']);
+        return hash_equals($tokenData['ua_hash'], sha1($userAgent));
     }
 
     /**
@@ -101,26 +159,8 @@ class TokenService
      */
     public function invalidateToken(string $token): void
     {
-        Cache::forget("file_stream_token:{$token}");
-    }
+        $cacheKey = "file_access_token:{$token}";
 
-    /**
-     * Strict Browser footprint verification wrapper.
-     * 
-     * @param string $requestUserAgent
-     * @param string $tokenUserAgent
-     * @return bool
-     */
-    private function verifyUserAgent(string $requestUserAgent, string $tokenUserAgent): bool
-    {
-        $agent1 = new Agent();
-        $agent1->setUserAgent($requestUserAgent);
-
-        $agent2 = new Agent();
-        $agent2->setUserAgent($tokenUserAgent);
-
-        return $agent1->browser() === $agent2->browser()
-            && $agent1->platform() === $agent2->platform()
-            && $agent1->device() === $agent2->device();
+        Cache::forget($cacheKey);
     }
 }
