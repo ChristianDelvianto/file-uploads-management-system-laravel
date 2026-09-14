@@ -1,36 +1,43 @@
 <?php
 
-use App\Http\Controllers\v1\FileController;
-use App\Http\Controllers\v1\FileContentController;
-use App\Http\Controllers\v1\FileLinkController;
-use App\Http\Controllers\v1\FileRestoreController;
-use App\Http\Controllers\v1\FileTrashController;
-use App\Http\Controllers\v1\FileUpdateNameController;
-use App\Http\Controllers\v1\FileUpdateVisibilityController;
+use App\Http\Controllers\v1\File\FileController;
+use App\Http\Controllers\v1\File\FileContentDownloadController;
+use App\Http\Controllers\v1\File\FileContentShowController;
+use App\Http\Controllers\v1\File\FileContentStreamController;
+use App\Http\Controllers\v1\File\FileContentThumbnailController;
+use App\Http\Controllers\v1\File\FileLinkDownloadController;
+use App\Http\Controllers\v1\File\FileLinkShareController;
+use App\Http\Controllers\v1\File\FileLinkStreamController;
+use App\Http\Controllers\v1\File\FileNameController;
+use App\Http\Controllers\v1\File\FileRemergeController;
+use App\Http\Controllers\v1\File\FileRestoreController;
+use App\Http\Controllers\v1\File\FileTrashController;
+use App\Http\Controllers\v1\File\FileVisibilityController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('file', FileController::class)
-->middlewareFor(['destroy'], ['auth:sanctum'])
+->middlewareFor(['destroy'], ['auth'])
 ->only(['destroy', 'show']);
 
 Route::prefix('file/{file}/content')
 ->as('file.content.')
 ->group(function () {
-    Route::get('/', [FileContentController::class, 'show'])
+    Route::get('/', FileContentShowController::class)
     ->middleware(['verify_token'])
     ->withTrashed()
     ->name('show');
 
-    Route::get('download', [FileContentController::class, 'download'])
+    Route::get('download', FileContentDownloadController::class)
     ->middleware(['verify_token'])
     ->name('download');
 
-    // Only for audio and video files
-    Route::get('stream', [FileContentController::class, 'stream'])
+    // Only for audio and video files (If file deleted, throws 404)
+    Route::get('stream', FileContentStreamController::class)
     ->middleware(['verify_token'])
     ->name('stream');
 
-    Route::get('thumbnail', [FileContentController::class, 'showThumbnail'])
+    // Apply withTrashed() so end users can see the file thumbnail in "trash" page
+    Route::get('thumbnail', FileContentThumbnailController::class)
     ->withTrashed()
     ->name('thumbnail');
 });
@@ -38,35 +45,35 @@ Route::prefix('file/{file}/content')
 Route::prefix('file/{file}/link')
 ->as('file.link.')
 ->group(function () {
-    Route::get('download', [FileLinkController::class, 'download'])
-    ->name('download');
+    // If file is public, guest can download
+    Route::get('download', FileLinkDownloadController::class)->name('download');
 
-    Route::get('share', [FileLinkController::class, 'share'])
-    ->middleware(['auth:sanctum'])
+    Route::get('share', FileLinkShareController::class)
+    ->middleware(['auth'])
     ->name('share');
 
-    // Only for audio and video files
-    Route::get('stream', [FileLinkController::class, 'stream'])
-    ->name('stream');
+    // Only for audio and video files (If file is public, guest can stream)
+    Route::get('stream', FileLinkStreamController::class)->name('stream');
 });
 
+Route::patch('file/{file}/name', FileNameController::class)
+->middleware(['auth'])
+->name('file.name');
+
+Route::post('file/{file}/remerge', FileRemergeController::class)
+->middleware(['auth'])
+->name('file.remerge');
+
 Route::patch('file/{file}/restore', FileRestoreController::class)
-->middleware(['auth:sanctum'])
+->middleware(['auth'])
 ->withTrashed()
 ->name('file.restore');
 
 Route::patch('file/{file}/trash', FileTrashController::class)
-->middleware(['auth:sanctum'])
+->middleware(['auth'])
 ->withTrashed()
 ->name('file.trash');
 
-Route::prefix('file/{file}/update')
-->as('file.update.')
-->middleware(['auth:sanctum'])
-->group(function () {
-    Route::put('name', FileUpdateNameController::class)
-    ->name('name');
-
-    Route::put('visibility', FileUpdateVisibilityController::class)
-    ->name('visibility');
-});
+Route::patch('file/{file}/visibility', FileVisibilityController::class)
+->middleware(['auth'])
+->name('file.visibility');
