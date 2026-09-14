@@ -23,10 +23,19 @@ class VerifyToken
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $env = config('app.env');
+        $tokenLength = config('custom.file.access_token_length');
+
         $file = $request->route('file');
         $token = $request->query('token', null);
 
-        if (!URL::hasCorrectSignature($request, false)) {
+        $isURLAbsolute = $env !== 'local';
+
+        /**
+         * We will verify the signed URL to ensure that the request is coming from a valid source.
+         * This is a security measure to prevent unauthorized access to the file content.
+         */
+        if (!URL::hasCorrectSignature($request, $isURLAbsolute)) {
             abort(403, 'Invalid access URL.');
         }
 
@@ -34,14 +43,14 @@ class VerifyToken
             abort(403, 'Access token is required.');
         }
 
-        if (preg_match('/^[a-z0-9]{64}$/i', $token) === 0) {
+        if (preg_match("/^[a-z0-9]{$tokenLength}$/i", $token) === 0) {
             abort(403, 'Invalid access token.');
         }
 
         $tokenData = $this->tokenService->getTokenData($token);
 
         if (is_null($tokenData)) {
-            abort(403, 'Access token has expired.');
+            abort(403, 'Access token expired.');
         }
 
         $isTokenValid = $this->tokenService->verifyToken($file, $request->ip(), $request->userAgent(), $tokenData);
